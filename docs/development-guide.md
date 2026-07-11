@@ -15,7 +15,7 @@ pip install -e ".[dev]"
 | グループ | 用途 | 主なパッケージ |
 |---|---|---|
 | `dev` | テスト実行 | `pytest`, `hypothesis`, `httpx` |
-| `api` | FastAPI APIエンドポイントの実行 | `fastapi`, `uvicorn`, `pydantic` |
+| `api` | FastAPI APIエンドポイントの実行 | `fastapi`, `uvicorn`, `pydantic`, `httpx`, `google-auth` |
 | `postgres` | Cloud SQL for PostgreSQL実装の実行 | `asyncpg` |
 | `gcs` | Cloud Storage実装の実行 | `google-cloud-storage` |
 
@@ -33,6 +33,8 @@ regional-revitalization-support-system/
 ├── tests/                          # 単体テスト・Property-Based Test・E2Eテスト
 ├── migrations/                     # Cloud SQL用マイグレーションスクリプト（DDL）
 ├── terraform/                      # GCPリソースのTerraformコード
+├── docker/                         # 各サービスのDockerfile（api/infer/vacant_sync）
+├── .github/workflows/              # GitHub ActionsのCI/CDワークフロー（ci.yml, deploy.yml）
 ├── docs/                           # 本ドキュメント群
 └── .kiro/specs/.../                # 要件定義書・設計書・実装タスクリスト
 ```
@@ -108,6 +110,16 @@ Cloud SQL・Cloud Storage・Places API等、外部リソースに依存する実
 3. 実運用向け実装（`asyncpg`, `google-cloud-storage`, `httpx`等を使用）は、`try/except ImportError`でパッケージ未インストール時のimportエラーを防ぎ、型ヒントのみ`TYPE_CHECKING`ガードで参照する。
 
 これにより、外部パッケージがインストールされていない開発環境でも、コードの読み込み・インメモリ実装によるテストが常に可能です。
+
+## コンテナイメージのローカルビルド
+
+各サービスのDockerfileは`docker/`ディレクトリに配置されています（`docker/api/`, `docker/infer/`, `docker/vacant_sync/`）。ローカルでビルドを確認する場合はリポジトリルートで以下を実行します（Docker CLIが必要です）。
+
+```bash
+docker build -f docker/api/Dockerfile -t regional-revitalization-api:local .
+```
+
+GCPへのイメージのプッシュ、Terraformとの連携、GitHub ActionsによるCI/CDの詳細は[deployment-guide.md](./deployment-guide.md)を参照してください。
 
 ## 静的解析・型チェック
 

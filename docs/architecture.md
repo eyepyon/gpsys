@@ -48,6 +48,7 @@ graph TD
 |---|---|---|---|
 | APIRun | アプリ本体サービス。相談応答・地域資源登録・居抜き物件検索のHTTP APIを提供 | Cloud Run（GPUなし） | `src/regional_revitalization/api.py` |
 | InferRun | 推論サービス。Gemma 4 12B QATモデルによるテキスト生成 | Cloud Run（GPU: NVIDIA L4） | `src/regional_revitalization/infer_run_api.py` |
+| Artifact Registry | APIRun/InferRun/居抜き物件同期サービスのコンテナイメージ格納リポジトリ | Artifact Registry（Docker形式） | `terraform/modules/artifact_registry/` |
 | VacantPropertySyncService | 居抜き物件同期サービス。Places APIを呼び出し閉店検知・DB保存を行う定期バッチ | Cloud Run Jobs（Cloud Schedulerで定期トリガー） | `src/regional_revitalization/vacant_property_sync_job.py` |
 | Cloud SQL for PostgreSQL | 地域資源・居抜き物件候補・相談履歴を保存するデータストア | Cloud SQL（プライベートIP） | `migrations/001_init_schema.sql` |
 | Cloud Storage | 地域資源に紐づくファイル（画像・PDF等）の保存先 | Cloud Storage（非公開バケット） | `src/regional_revitalization/storage.py` |
@@ -159,14 +160,31 @@ src/regional_revitalization/
 ├── postgres_repository.py                  # ResourceRepositoryのCloud SQL実装（asyncpg）
 ├── registration.py                         # register_resource()（地域資源登録）
 ├── storage.py                              # StorageClient Protocol, GcsStorageClient（Cloud Storage）
-├── inference.py                            # InferenceClient Protocol, GenerateRequest/Response
+├── inference.py                            # InferenceClient Protocol, GenerateRequest/Response, HttpInferenceClient
 ├── consultation.py                         # generate_consultation_response()（相談応答）
-├── api.py                                  # アプリ本体サービス（APIRun）のFastAPIエンドポイント
+├── api.py                                  # アプリ本体サービス（APIRun）のFastAPIエンドポイント、起動時ブートストラップ
 ├── infer_run_api.py                        # 推論サービス（InferRun）のFastAPIエンドポイント
 ├── vacant_property.py                      # 居抜き物件関連のデータモデル・ロジック（VacantPropertyCandidate等）
 ├── postgres_vacant_property_repository.py  # VacantPropertyRepositoryのCloud SQL実装
 └── vacant_property_sync_job.py             # 居抜き物件同期サービス（Cloud Run Jobs）のエントリポイント
+
+terraform/                                  # Terraformコード（インフラのコード化）詳細はdeployment-guide.md参照
+├── modules/artifact_registry/              # コンテナイメージ格納用リポジトリ
+└── modules/github_actions_wif/             # GitHub ActionsからのWorkload Identity連携
+
+docker/                                     # 各サービスのコンテナイメージ定義（マルチステージビルド、非rootユーザー実行）
+├── api/Dockerfile                          # APIRun用
+├── infer/Dockerfile                        # InferRun用
+└── vacant_sync/Dockerfile                  # 居抜き物件同期サービス用
+
+.github/workflows/                          # GitHub ActionsによるCI/CDパイプライン
+├── ci.yml                                  # テスト・terraform validate・dockerビルド確認（再利用可能ワークフロー）
+└── deploy.yml                              # mainブランチpush時のビルド・プッシュ・terraform apply
 ```
+
+**起動時ブートストラップ（`api.py`）**: APIRunはFastAPIの`lifespan`パラメータ（`_lifespan`）でアプリ起動時に`_bootstrap_production_dependencies()`を呼び出す。環境変数`DATABASE_URL`/`GCS_BUCKET_NAME`/`INFERENCE_SERVICE_URL`が設定されている場合のみ、インメモリ/モック実装から実運用実装（`PostgresResourceRepository`/`GcsStorageClient`/`HttpInferenceClient`）へ自動的に差し替える。環境変数が未設定のローカル開発・単体テストではインメモリ実装のままとなる。
+
+**推論サービスへのHTTP呼び出し（`inference.py`のHttpInferenceClient）**: APIRunからInferRunへの呼び出しをHTTP経由で行う実装。Cloud Run環境ではメタデータサーバーから取得したIDトークンを`Authorization: Bearer <token>`ヘッダーに設定し、Cloud RunのIAM認証と組み合わせて使用する。ローカル実行等でIDトークンが取得できない場合は認証ヘッダーを付与しない。
 
 ## セキュリティ設計
 

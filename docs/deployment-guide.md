@@ -82,6 +82,9 @@ docker/
 | `vacant_sync_schedule` | - | `0 3 * * *` | 同期サービスの実行スケジュール(unix-cron) |
 | `vacant_sync_time_zone` | - | `Etc/UTC` | スケジュールのタイムゾーン |
 | `labels` | - | `{app = "regional-revitalization"}` | 全リソース共通ラベル |
+| `artifact_registry_repository_id` | - | `regional-revitalization` | コンテナイメージを格納するArtifact Registryリポジトリ名 |
+| `enable_github_actions_wif` | - | `false` | GitHub Actions用のWorkload Identity連携（プール・プロバイダ・デプロイ用サービスアカウント）を作成するかどうか（2段階適用の切り替えフラグ） |
+| `github_repository` | - | `""` | GitHub ActionsからのWIF認証を許可するGitHubリポジトリ（`"org-name/repo-name"`形式） |
 
 ## 初回セットアップ手順（人間の管理者がローカルから実行）
 
