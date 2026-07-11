@@ -81,8 +81,8 @@ module "github_actions_wif" {
 module "network" {
   source = "./modules/network"
 
-  project_id     = var.project_id
-  region         = var.region
+  project_id    = var.project_id
+  region        = var.region
   network_name  = var.vpc_network_name
   ip_cidr_range = var.vpc_connector_cidr
   # VPCコネクタ名はGCPの制約で最大25文字（^[a-z][-a-z0-9]{0,23}[a-z0-9]$）。
