@@ -421,9 +421,6 @@ async def _bootstrap_initial_admin_user(
         )
         return
 
-    if await admin_user_repository.count() > 0:
-        return
-
     await create_admin_user(
         admin_user_repository,
         username=initial_username,
