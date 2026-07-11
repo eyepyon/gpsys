@@ -22,6 +22,12 @@ locals {
     "cloudscheduler.googleapis.com",
     "aiplatform.googleapis.com",
     "iam.googleapis.com",
+    # IAM Service Account Credentials API。Workload Identity Federation経由の
+    # なりすまし（impersonation、`generateAccessToken`/`iam.serviceAccounts.
+    # getAccessToken`権限）に必須。有効化されていないと`roles/iam.
+    # workloadIdentityUser`を付与済みでも`google-github-actions/auth`の
+    # トークン取得がPERMISSION_DENIEDになる。
+    "iamcredentials.googleapis.com",
   ]
 }
 

@@ -37,6 +37,7 @@
   - `cloudscheduler.googleapis.com`
   - `aiplatform.googleapis.com`
   - `iam.googleapis.com`
+  - `iamcredentials.googleapis.com`（Workload Identity Federation経由のなりすまし（impersonation）に必須）
 
 ## ディレクトリ構成
 
