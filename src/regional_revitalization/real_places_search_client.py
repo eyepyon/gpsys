@@ -30,6 +30,7 @@ _PLACES_TEXT_SEARCH_FIELD_MASK = (
 )
 
 _TEXT_SEARCH_ENDPOINT = "https://places.googleapis.com/v1/places:searchText"
+_NEARBY_SEARCH_ENDPOINT = "https://places.googleapis.com/v1/places:searchNearby"
 
 
 class ConfigurationError(Exception):
@@ -131,3 +132,38 @@ class RealPlacesSearchClient:
         places = data.get("places", [])
         results = [_parse_place_result(place) for place in places]
         return [r for r in results if r is not None]
+
+    def search_nearby(
+        self, location: GeoPoint, radius_km: float
+    ) -> list[PlaceDetailsResult]:
+        """キーワードや業種を指定せず、指定範囲内の店舗・施設を取得する。"""
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": self._api_key,
+            "X-Goog-FieldMask": _PLACES_TEXT_SEARCH_FIELD_MASK,
+        }
+        body = {
+            "maxResultCount": 20,
+            "rankPreference": "POPULARITY",
+            "locationRestriction": {
+                "circle": {
+                    "center": {
+                        "latitude": location.latitude,
+                        "longitude": location.longitude,
+                    },
+                    "radius": radius_km * 1000.0,
+                }
+            },
+        }
+        try:
+            response = self._httpx.post(
+                _NEARBY_SEARCH_ENDPOINT,
+                headers=headers,
+                json=body,
+                timeout=self._timeout_seconds,
+            )
+            response.raise_for_status()
+        except self._httpx.HTTPError as exc:
+            raise PlacesApiError(f"Places Nearby Search呼び出しに失敗しました: {exc}") from exc
+        results = [_parse_place_result(place) for place in response.json().get("places", [])]
+        return [result for result in results if result is not None]

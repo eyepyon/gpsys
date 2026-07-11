@@ -14,7 +14,7 @@ from regional_revitalization.vacant_property import BusinessStatus, VacantProper
 from regional_revitalization.vacant_property_sync_job import get_places_api_key, parse_db_connection_json, _get_required_env
 
 RADIUS_KM = 10.0
-MAX_RESULTS = 100
+MAX_RESULTS = 400
 MIN_SEED_DISTANCE_KM = 2.0
 MIN_RESULT_DISTANCE_KM = 0.05
 
@@ -52,11 +52,7 @@ async def run() -> None:
         client = RealPlacesSearchClient(get_places_api_key())
         found: dict[str, tuple[object, object]] = {}
         for request_id, point in seeds:
-            for place in client.search_text(point, RADIUS_KM, "閉業"):
-                if place.business_status != BusinessStatus.CLOSED_PERMANENTLY:
-                    continue
-                if any(distance_km(place.location, saved.location) < MIN_RESULT_DISTANCE_KM for _, saved in found.values()):
-                    continue
+            for place in client.search_nearby(point, RADIUS_KM):
                 found.setdefault(place.place_id, (request_id, place))
                 if len(found) >= MAX_RESULTS:
                     break
@@ -66,24 +62,26 @@ async def run() -> None:
         now = datetime.now(timezone.utc)
         repository = PostgresVacantPropertyRepository(pool)
         for request_id, place in found.values():
-            candidate = VacantPropertyCandidate(
-                place_id=place.place_id, name=place.name, location=place.location,
-                business_status=place.business_status, types=place.types,
-                address=place.address, phone_number=place.phone_number,
-                data_fetched_at=now, last_review_time=place.latest_review_time,
-                estimated_closure_period_start=None, estimated_closure_period_end=None,
-            )
-            await repository.upsert_by_place_id(candidate)
+            is_closed = place.business_status == BusinessStatus.CLOSED_PERMANENTLY
+            if is_closed:
+                candidate = VacantPropertyCandidate(
+                    place_id=place.place_id, name=place.name, location=place.location,
+                    business_status=place.business_status, types=place.types,
+                    address=place.address, phone_number=place.phone_number,
+                    data_fetched_at=now, last_review_time=place.latest_review_time,
+                    estimated_closure_period_start=None, estimated_closure_period_end=None,
+                )
+                await repository.upsert_by_place_id(candidate)
             await pool.execute(
                 """INSERT INTO places_search_results
                    (result_id,search_request_id,place_id,name,location,business_status,
                     types,address,phone_number,is_registered,created_at)
-                   SELECT $1,$2,$3,$4,ST_MakePoint($5,$6)::geography,$7,$8,$9,$10,true,$11
+                   SELECT $1,$2,$3,$4,ST_MakePoint($5,$6)::geography,$7,$8,$9,$10,$11,$12
                    WHERE NOT EXISTS (SELECT 1 FROM places_search_results WHERE place_id=$3)""",
                 uuid4(), request_id, place.place_id, place.name,
                 place.location.longitude, place.location.latitude,
                 place.business_status.value, place.types, place.address,
-                place.phone_number, now,
+                place.phone_number, is_closed, now,
             )
         if seeds:
             await pool.execute(
