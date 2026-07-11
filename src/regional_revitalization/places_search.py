@@ -169,6 +169,7 @@ async def execute_places_search(
     radius_km: float,
     keyword: str | None,
     search_request_id: UUID | None,
+    business_status: BusinessStatus | None = None,
 ) -> list[PlacesSearchResult]:
     """指定した場所でGoogle Places APIのリアルタイム検索を実行し、
 
@@ -193,6 +194,12 @@ async def execute_places_search(
         raise ValueError(f"radius_kmは正の数である必要があります: {radius_km}")
 
     details_list = places_search_client.search_text(location, radius_km, keyword)
+    if business_status is not None:
+        details_list = [
+            details
+            for details in details_list
+            if details.business_status == business_status
+        ]
 
     now = datetime.now(timezone.utc)
     results = [

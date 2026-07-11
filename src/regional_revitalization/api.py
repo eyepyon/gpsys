@@ -1551,6 +1551,7 @@ async def admin_execute_places_search(
             body.radius_km,
             body.keyword,
             search_request_id,
+            BusinessStatus.CLOSED_PERMANENTLY,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

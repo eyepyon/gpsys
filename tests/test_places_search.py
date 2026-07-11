@@ -56,6 +56,34 @@ class TestExecutePlacesSearch:
         with pytest.raises(ValueError, match="radius_km"):
             await execute_places_search(client, result_repo, location, 0, None, None)
 
+    async def test_filters_results_by_business_status_before_saving(self) -> None:
+        operational = PlaceDetailsResult(
+            place_id="open-place",
+            name="営業中店舗",
+            location=GeoPoint(latitude=35.68, longitude=139.76),
+            business_status=BusinessStatus.OPERATIONAL,
+            types=["restaurant"],
+            address=None,
+            phone_number=None,
+            latest_review_time=None,
+        )
+        client = MockPlacesSearchClient(results=[_make_place_details(), operational])
+        result_repo = InMemoryPlacesSearchResultRepository()
+        location = GeoPoint(latitude=35.68, longitude=139.76)
+
+        results = await execute_places_search(
+            client,
+            result_repo,
+            location,
+            10.0,
+            None,
+            None,
+            BusinessStatus.CLOSED_PERMANENTLY,
+        )
+
+        assert [result.place_id for result in results] == ["place-1"]
+        assert len(result_repo) == 1
+
     async def test_propagates_places_api_error(self) -> None:
         client = MockPlacesSearchClient(should_error=True)
         result_repo = InMemoryPlacesSearchResultRepository()
