@@ -68,6 +68,7 @@ from regional_revitalization.places_search import (
     InMemoryPlacesSearchResultRepository,
     MockPlacesSearchClient,
     PlacesSearchClient,
+    PlacesSearchResult,
     PlacesSearchResultRepository,
     execute_places_search,
     register_search_result,
@@ -84,6 +85,7 @@ from regional_revitalization.resource_management import (
 )
 from regional_revitalization.search_history import (
     InMemorySearchRequestRepository,
+    SearchRequest,
     SearchRequestRepository,
     record_search_request,
 )
@@ -636,10 +638,13 @@ def create_resource(
     "/vacant-properties/search",
     response_model=VacantPropertySearchResponseBody,
 )
-def search_vacant_properties_endpoint(
+async def search_vacant_properties_endpoint(
     body: VacantPropertySearchRequestBody,
     vacant_property_repository: VacantPropertyRepository = Depends(
         get_vacant_property_repository
+    ),
+    search_request_repository: SearchRequestRepository = Depends(
+        get_search_request_repository
     ),
 ) -> VacantPropertySearchResponseBody:
     """居抜き物件検索リクエストを受け付け、`search_vacant_properties()`を
@@ -649,6 +654,8 @@ def search_vacant_properties_endpoint(
     - 入力検証エラー（`radius_km<=0`、`limit<1`、緯度経度の範囲外等）が
       発生した場合は400を返す
     - その他の予期しない例外（DBエラー等）が発生した場合は500を返す
+    - 検索が成功した場合、検索した場所・条件・結果件数を常に記録する
+      （管理画面から「この場所でGoogle Places APIを検索する」機能のため）
     """
     try:
         location = GeoPoint(latitude=body.latitude, longitude=body.longitude)
@@ -666,6 +673,18 @@ def search_vacant_properties_endpoint(
         raise HTTPException(
             status_code=500, detail=f"居抜き物件検索に失敗しました: {exc}"
         ) from exc
+
+    try:
+        await record_search_request(
+            search_request_repository,
+            location,
+            body.radius_km,
+            body.business_status,
+            body.types,
+            len(candidates),
+        )
+    except Exception:  # noqa: BLE001 - 履歴記録の失敗で検索応答自体を失敗させない
+        logger.exception("検索リクエスト履歴の記録に失敗しました")
 
     return VacantPropertySearchResponseBody(
         candidates=[
@@ -1323,3 +1342,319 @@ async def admin_reject_update_request(
     updated = await update_request_repository.get_by_id(target_id)
     assert updated is not None
     return _update_request_to_body(updated)
+
+
+# --------------------------------------------------------------------------
+# 管理画面向けエンドポイント（検索履歴・Places APIリアルタイム検索）
+# --------------------------------------------------------------------------
+# 利用者の居抜き物件検索リクエストは常に記録される（search_vacant_properties_
+# endpoint参照）。管理画面はこの履歴一覧から、任意の1件を選んで
+# 「この場所でGoogle Places APIを検索する」を実行できる。検索結果は
+# 「登録待ち」の状態で保存され、管理者が個別に確認して登録するまでは
+# vacant_property_candidatesへの反映は行われない。
+
+
+class SearchRequestBody(BaseModel):
+    """検索リクエスト履歴1件分のレスポンス表現。"""
+
+    search_request_id: str
+    latitude: float
+    longitude: float
+    radius_km: float
+    business_status: str | None
+    types: list[str] | None
+    result_count: int
+    created_at: datetime
+
+
+class SearchRequestListResponseBody(BaseModel):
+    """`GET /admin/search-requests`のレスポンスボディ。"""
+
+    search_requests: list[SearchRequestBody]
+
+
+def _search_request_to_body(request: SearchRequest) -> SearchRequestBody:
+    return SearchRequestBody(
+        search_request_id=str(request.search_request_id),
+        latitude=request.location.latitude,
+        longitude=request.location.longitude,
+        radius_km=request.radius_km,
+        business_status=(
+            request.business_status.value if request.business_status else None
+        ),
+        types=request.types,
+        result_count=request.result_count,
+        created_at=request.created_at,
+    )
+
+
+@app.get("/admin/search-requests", response_model=SearchRequestListResponseBody)
+async def admin_list_search_requests(
+    limit: int = 100,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    search_request_repository: SearchRequestRepository = Depends(
+        get_search_request_repository
+    ),
+) -> SearchRequestListResponseBody:
+    """利用者の検索リクエスト履歴を直近順に返す。"""
+    requests = await search_request_repository.list_recent(limit)
+    return SearchRequestListResponseBody(
+        search_requests=[_search_request_to_body(r) for r in requests]
+    )
+
+
+class PlacesSearchExecuteRequestBody(BaseModel):
+    """`POST /admin/places-search`のリクエストボディ。"""
+
+    search_request_id: str | None = Field(
+        default=None, description="起点となる検索リクエスト履歴のID（任意）"
+    )
+    latitude: float = Field(..., description="検索基準位置の緯度")
+    longitude: float = Field(..., description="検索基準位置の経度")
+    radius_km: float = Field(..., description="検索半径（キロメートル）")
+    keyword: str | None = Field(default=None, description="検索キーワード（任意）")
+
+
+class PlacesSearchResultBody(BaseModel):
+    """Places APIリアルタイム検索結果1件分のレスポンス表現。"""
+
+    result_id: str
+    place_id: str
+    name: str
+    latitude: float
+    longitude: float
+    business_status: str
+    types: list[str]
+    address: str | None
+    phone_number: str | None
+    is_registered: bool
+
+
+class PlacesSearchExecuteResponseBody(BaseModel):
+    """`POST /admin/places-search`のレスポンスボディ。"""
+
+    results: list[PlacesSearchResultBody]
+
+
+def _places_search_result_to_body(result: PlacesSearchResult) -> PlacesSearchResultBody:
+    return PlacesSearchResultBody(
+        result_id=str(result.result_id),
+        place_id=result.place_id,
+        name=result.name,
+        latitude=result.location.latitude,
+        longitude=result.location.longitude,
+        business_status=result.business_status.value,
+        types=result.types,
+        address=result.address,
+        phone_number=result.phone_number,
+        is_registered=result.is_registered,
+    )
+
+
+@app.post("/admin/places-search", response_model=PlacesSearchExecuteResponseBody)
+async def admin_execute_places_search(
+    body: PlacesSearchExecuteRequestBody,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    places_search_client: PlacesSearchClient = Depends(get_places_search_client),
+    places_search_result_repository: PlacesSearchResultRepository = Depends(
+        get_places_search_result_repository
+    ),
+) -> PlacesSearchExecuteResponseBody:
+    """指定した場所でGoogle Places APIのリアルタイム検索を実行する。
+
+    検索履歴一覧のある行から「この場所で検索する」を押した場合は
+    `search_request_id`を指定する。管理者が任意の場所を直接指定して
+    検索することもできる（`search_request_id`は省略可）。
+
+    結果は「登録待ち」の状態で保存されるのみで、`vacant_property_candidates`
+    への反映は行われない（`POST /admin/places-search/{result_id}/register`
+    で個別に登録する）。
+    """
+    search_request_id: UUID | None = None
+    if body.search_request_id is not None:
+        try:
+            search_request_id = UUID(body.search_request_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail="search_request_idの形式が不正です"
+            ) from exc
+
+    try:
+        location = GeoPoint(latitude=body.latitude, longitude=body.longitude)
+        results = await execute_places_search(
+            places_search_client,
+            places_search_result_repository,
+            location,
+            body.radius_km,
+            body.keyword,
+            search_request_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PlacesApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return PlacesSearchExecuteResponseBody(
+        results=[_places_search_result_to_body(r) for r in results]
+    )
+
+
+@app.post(
+    "/admin/places-search/{result_id}/register",
+    response_model=PlacesSearchResultBody,
+)
+async def admin_register_places_search_result(
+    result_id: str,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    places_search_result_repository: PlacesSearchResultRepository = Depends(
+        get_places_search_result_repository
+    ),
+    vacant_property_repository: VacantPropertyRepository = Depends(
+        get_vacant_property_repository
+    ),
+) -> PlacesSearchResultBody:
+    """Places APIリアルタイム検索結果を、居抜き物件候補として正式に登録する。"""
+    try:
+        target_id = UUID(result_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="result_idの形式が不正です") from exc
+
+    try:
+        await register_search_result(
+            places_search_result_repository, vacant_property_repository, target_id
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        status_code = 404 if "見つかりません" in detail else 400
+        raise HTTPException(status_code=status_code, detail=detail) from exc
+
+    updated = await places_search_result_repository.get_by_id(target_id)
+    assert updated is not None
+    return _places_search_result_to_body(updated)
+
+
+# --------------------------------------------------------------------------
+# 管理画面向けエンドポイント（居抜き物件候補のマップ表示・編集）
+# --------------------------------------------------------------------------
+
+
+class AdminVacantPropertyBody(BaseModel):
+    """管理画面向けの居抜き物件候補1件分のレスポンス表現。"""
+
+    place_id: str
+    name: str
+    latitude: float
+    longitude: float
+    business_status: str
+    types: list[str]
+    address: str | None
+    phone_number: str | None
+    rent_yen: int | None
+    area_sqm: float | None
+    built_year: int | None
+    structure: str | None
+
+
+class AdminVacantPropertyListResponseBody(BaseModel):
+    """`GET /admin/vacant-properties`のレスポンスボディ。"""
+
+    vacant_properties: list[AdminVacantPropertyBody]
+
+
+class AdminVacantPropertyUpdateRequestBody(BaseModel):
+    """`PATCH /admin/vacant-properties/{place_id}`のリクエストボディ。
+
+    賃料・面積・築年数・構造は、いずれもGoogle Places APIからは取得できない
+    管理画面専用の手動編集項目。`null`を指定すると値をクリアできる
+    （他の更新系エンドポイントと異なり、指定しなかった項目のみを維持する
+    COALESCE方式ではなく、送信された値で常に上書きする）。
+    """
+
+    rent_yen: int | None = Field(default=None, description="賃料（円/月）")
+    area_sqm: float | None = Field(default=None, description="面積（平方メートル）")
+    built_year: int | None = Field(default=None, description="築年")
+    structure: str | None = Field(default=None, description="構造（例: 鉄骨造）")
+
+
+def _vacant_property_to_admin_body(
+    candidate: VacantPropertyCandidate,
+) -> AdminVacantPropertyBody:
+    return AdminVacantPropertyBody(
+        place_id=candidate.place_id,
+        name=candidate.name,
+        latitude=candidate.location.latitude,
+        longitude=candidate.location.longitude,
+        business_status=candidate.business_status.value,
+        types=candidate.types,
+        address=candidate.address,
+        phone_number=candidate.phone_number,
+        rent_yen=candidate.rent_yen,
+        area_sqm=candidate.area_sqm,
+        built_year=candidate.built_year,
+        structure=candidate.structure,
+    )
+
+
+@app.get(
+    "/admin/vacant-properties", response_model=AdminVacantPropertyListResponseBody
+)
+async def admin_list_vacant_properties(
+    min_latitude: float,
+    min_longitude: float,
+    max_latitude: float,
+    max_longitude: float,
+    limit: int = 200,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    vacant_property_repository: VacantPropertyRepository = Depends(
+        get_vacant_property_repository
+    ),
+) -> AdminVacantPropertyListResponseBody:
+    """管理画面のマップ表示用に、指定した矩形範囲内の居抜き物件候補一覧を返す。"""
+    try:
+        candidates = search_vacant_properties_in_bounds(
+            vacant_property_repository,
+            min_latitude,
+            min_longitude,
+            max_latitude,
+            max_longitude,
+            limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return AdminVacantPropertyListResponseBody(
+        vacant_properties=[_vacant_property_to_admin_body(c) for c in candidates]
+    )
+
+
+@app.patch(
+    "/admin/vacant-properties/{place_id}", response_model=AdminVacantPropertyBody
+)
+async def admin_update_vacant_property(
+    place_id: str,
+    body: AdminVacantPropertyUpdateRequestBody,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    vacant_property_repository: VacantPropertyRepository = Depends(
+        get_vacant_property_repository
+    ),
+) -> AdminVacantPropertyBody:
+    """居抜き物件候補の賃料・面積・築年数・構造（管理画面専用の手動編集項目）を更新する。"""
+    existing = vacant_property_repository.get_by_place_id(place_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail=f"居抜き物件候補が見つかりません: {place_id}")
+
+    try:
+        update_vacant_property_details(
+            vacant_property_repository,
+            place_id,
+            body.rent_yen,
+            body.area_sqm,
+            body.built_year,
+            body.structure,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    target = vacant_property_repository.get_by_place_id(place_id)
+    assert target is not None
+    return _vacant_property_to_admin_body(target)

@@ -241,7 +241,10 @@ async def register_search_result(
     if result.is_registered:
         raise ValueError("この検索結果は既に登録済みです")
 
-    now = datetime.now(timezone.utc)
+    # VacantPropertyCandidate.data_fetched_atはnaive datetime（datetime.now()）
+    # との比較を前提としているため、awareなdatetime.now(timezone.utc)ではなく
+    # naiveなdatetime.now()を使用する（vacant_property.py既存実装との一貫性）。
+    now = datetime.now()
     start, end = estimate_closure_period(data_fetched_at=now, last_review_time=None)
     candidate = VacantPropertyCandidate(
         place_id=result.place_id,

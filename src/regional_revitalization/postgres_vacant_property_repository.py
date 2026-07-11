@@ -183,6 +183,23 @@ class PostgresVacantPropertyRepository:
         )
         return [_row_to_candidate(row) for row in rows]
 
+    async def get_by_place_id(self, place_id: str) -> VacantPropertyCandidate | None:
+        """`place_id`に一致する居抜き物件候補を返す（パラメータ化クエリ）。"""
+        query = """
+            SELECT
+                place_id, name,
+                ST_Y(location::geometry) AS latitude,
+                ST_X(location::geometry) AS longitude,
+                business_status, types, address, phone_number,
+                data_fetched_at, last_review_time,
+                estimated_closure_period_start, estimated_closure_period_end,
+                rent_yen, area_sqm, built_year, structure
+            FROM vacant_property_candidates
+            WHERE place_id = $1
+        """
+        row = await self._pool.fetchrow(query, place_id)
+        return _row_to_candidate(row) if row is not None else None
+
     async def search_in_bounds(
         self,
         min_latitude: float,

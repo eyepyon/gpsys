@@ -86,6 +86,8 @@ function renderAdminNav(activePage) {
   const links = [
     { href: "dashboard.html", label: "ダッシュボード", key: "dashboard" },
     { href: "resources.html", label: "データ更新", key: "resources" },
+    { href: "vacant_properties.html", label: "居抜き物件", key: "vacant_properties" },
+    { href: "search_requests.html", label: "検索履歴", key: "search_requests" },
     { href: "requests.html", label: "更新依頼", key: "requests" },
     { href: "stats.html", label: "統計情報", key: "stats" },
     { href: "users.html", label: "管理ユーザー", key: "users" },

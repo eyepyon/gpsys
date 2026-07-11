@@ -178,6 +178,29 @@ resource "google_secret_manager_secret_version" "admin_initial_password" {
   secret_data = var.admin_initial_password
 }
 
+# --- 管理画面の「この場所でGoogle Places APIを検索する」機能用シークレット ---
+#
+# 居抜き物件同期サービス（vacant_property_sync_job）のPlaces APIキーとは
+# 別のシークレットとして分離し、APIRun実行用サービスアカウントにのみ
+# アクセス権限を付与する（用途ごとにアクセス制御・ローテーションを分離できる）。
+resource "google_secret_manager_secret" "admin_places_api_key" {
+  project   = var.project_id
+  secret_id = "admin-places-api-key-${var.environment}"
+
+  replication {
+    auto {}
+  }
+
+  labels = var.labels
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "admin_places_api_key" {
+  secret      = google_secret_manager_secret.admin_places_api_key.id
+  secret_data = var.admin_places_api_key
+}
+
 # --- cloudrun_app: アプリ本体サービス (APIRun) ---
 module "cloudrun_app" {
   source = "./modules/cloudrun_app"
@@ -195,6 +218,7 @@ module "cloudrun_app" {
   cors_allowed_origins             = var.app_cors_allowed_origins
   admin_initial_username           = var.admin_initial_username
   admin_initial_password_secret_id = google_secret_manager_secret.admin_initial_password.secret_id
+  admin_places_api_key_secret_id   = google_secret_manager_secret.admin_places_api_key.secret_id
   labels                           = var.labels
 }
 

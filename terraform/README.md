@@ -77,6 +77,7 @@ terraform/
 | `frontend_image` | ○ | - | inukiのコンテナイメージURL(nginxで`frontend/index.html`を配信) |
 | `admin_initial_username` | - | `admin` | 管理画面(/admin/)の初回管理者アカウントのログインID |
 | `admin_initial_password` | ○（機密） | - | 管理画面の初回管理者アカウントのパスワード(8文字以上) |
+| `admin_places_api_key` | - | `""` | 管理画面の「この場所でGoogle Places APIを検索する」機能用APIキー。空文字列の場合は機能無効(モッククライアントのまま動作) |
 | `vacant_sync_job_name` | - | `vacant-property-sync` | 居抜き物件同期サービスのCloud Run Jobs名 |
 | `vacant_sync_image` | ○ | - | 居抜き物件同期サービスのコンテナイメージURL |
 | `vpc_network_name` | - | `default` | VPCコネクタを紐づける対象VPCネットワーク名 |

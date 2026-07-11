@@ -95,6 +95,11 @@ variable "admin_initial_password_secret_id" {
   type        = string
 }
 
+variable "admin_places_api_key_secret_id" {
+  description = "管理画面の「この場所でGoogle Places APIを検索する」機能用APIキーを格納したSecret ManagerシークレットのID"
+  type        = string
+}
+
 variable "cors_allowed_origins" {
   description = <<-EOT
     ブラウザから直接APIRunを呼び出すことを許可するオリジンのカンマ区切り一覧

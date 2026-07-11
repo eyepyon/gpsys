@@ -169,6 +169,21 @@ variable "app_allow_unauthenticated" {
   default     = false
 }
 
+variable "admin_places_api_key" {
+  description = <<-EOT
+    管理画面（/admin/）の「この場所でGoogle Places APIを検索する」機能で
+    使用するPlaces APIキー。居抜き物件同期サービス（Cloud Run Jobs）の
+    Places APIキーとはSecret Managerシークレットを分離し、APIRun実行用
+    サービスアカウントにのみアクセス権限を付与する。値はSecret Manager
+    登録用の一時的な入力としてのみ使用し、実運用ではCI/CD等のシークレット
+    ストアから注入すること。空文字列の場合はこの機能を無効化する
+    （モッククライアントのまま動作し、実際のPlaces API呼び出しは行わない）。
+  EOT
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "admin_initial_username" {
   description = <<-EOT
     管理画面(inuki/admin)の初回管理者アカウントのログインID。

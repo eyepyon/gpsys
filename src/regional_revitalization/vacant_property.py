@@ -243,6 +243,10 @@ class VacantPropertyRepository(Protocol):
         """
         ...
 
+    def get_by_place_id(self, place_id: str) -> VacantPropertyCandidate | None:
+        """`place_id`に一致する居抜き物件候補を返す。存在しない場合はNoneを返す。"""
+        ...
+
     def search_in_bounds(
         self,
         min_latitude: float,
@@ -332,6 +336,10 @@ class InMemoryVacantPropertyRepository:
             key=lambda candidate: haversine_distance_km(location, candidate.location)
         )
         return candidates[:limit]
+
+    def get_by_place_id(self, place_id: str) -> VacantPropertyCandidate | None:
+        """`place_id`に一致する居抜き物件候補を内部辞書から返す。存在しない場合はNoneを返す。"""
+        return self._candidates_by_place_id.get(place_id)
 
     def search_in_bounds(
         self,

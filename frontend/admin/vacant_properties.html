@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>居抜き物件 - いぬきんじょ管理画面</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+<div class="admin-container" style="max-width:1300px;">
+  <h1 style="font-size:1.4rem;">居抜き物件候補</h1>
+  <p style="color:#6b7280; font-size:0.9rem;">
+    マップを移動・ズームすると、その表示範囲内の居抜き物件候補がピンで表示されます。
+    ピンをクリックすると、賃料・面積・築年数・構造（管理画面専用の手動編集項目）を編集できます。
+  </p>
+
+  <div id="error" class="admin-error" style="display:none;"></div>
+
+  <div class="admin-card">
+    <div style="display:flex; gap:1.2rem; flex-wrap:wrap;">
+      <div style="flex:2; min-width:320px;">
+        <div id="map"></div>
+      </div>
+      <div style="flex:1; min-width:280px;">
+        <h2 style="font-size:1rem; margin-top:0;" id="edit-title">物件を選択してください</h2>
+        <form id="edit-form" class="admin-form" style="display:none;">
+          <p style="font-size:0.8rem; color:#6b7280;">
+            名称・業種・住所等はGoogle Places APIから取得した情報のため、
+            このページでは編集できません（Places APIの再取得時に自動更新されます）。
+          </p>
+          <label>賃料（円/月）</label>
+          <input id="f_rent" type="number" min="0" placeholder="例: 150000" />
+          <label>面積（㎡）</label>
+          <input id="f_area" type="number" min="0" step="0.01" placeholder="例: 45.5" />
+          <label>築年</label>
+          <input id="f_built_year" type="number" min="0" placeholder="例: 2010" />
+          <label>構造</label>
+          <input id="f_structure" type="text" placeholder="例: 鉄骨造" />
+          <button type="submit" class="admin-btn" style="margin-top:1rem;">保存</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+requireLogin();
+renderAdminNav("vacant_properties");
+
+const map = L.map("map").setView([35.68, 139.76], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors",
+  maxZoom: 19,
+}).addTo(map);
+
+let markers = {};
+let selectedPlaceId = null;
+
+function showError(message) {
+  const el = document.getElementById("error");
+  el.textContent = message;
+  el.style.display = "block";
+}
+function clearError() {
+  document.getElementById("error").style.display = "none";
+}
+
+async function loadPropertiesInView() {
+  clearError();
+  const bounds = map.getBounds();
+  try {
+    const res = await adminFetch(
+      "/admin/vacant-properties?" +
+        new URLSearchParams({
+          min_latitude: bounds.getSouth(),
+          min_longitude: bounds.getWest(),
+          max_latitude: bounds.getNorth(),
+          max_longitude: bounds.getEast(),
+          limit: 200,
+        })
+    );
+    if (!res.ok) throw new Error(`一覧の取得に失敗しました (HTTP ${res.status})`);
+    const data = await res.json();
+
+    Object.values(markers).forEach((m) => map.removeLayer(m));
+    markers = {};
+
+    for (const p of data.vacant_properties) {
+      const marker = L.marker([p.latitude, p.longitude], {
+        icon: L.icon({
+          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+        }),
+      }).addTo(map);
+      marker.bindTooltip(p.name);
+      marker.on("click", () => selectProperty(p));
+      markers[p.place_id] = marker;
+    }
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function selectProperty(p) {
+  selectedPlaceId = p.place_id;
+  document.getElementById("edit-title").textContent =
+    `${p.name} (${p.business_status})`;
+  document.getElementById("edit-form").style.display = "block";
+  document.getElementById("f_rent").value = p.rent_yen ?? "";
+  document.getElementById("f_area").value = p.area_sqm ?? "";
+  document.getElementById("f_built_year").value = p.built_year ?? "";
+  document.getElementById("f_structure").value = p.structure ?? "";
+}
+
+document.getElementById("edit-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!selectedPlaceId) return;
+  clearError();
+
+  const rent = document.getElementById("f_rent").value;
+  const area = document.getElementById("f_area").value;
+  const builtYear = document.getElementById("f_built_year").value;
+  const structure = document.getElementById("f_structure").value;
+
+  try {
+    const res = await adminFetch(`/admin/vacant-properties/${selectedPlaceId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        rent_yen: rent === "" ? null : parseInt(rent, 10),
+        area_sqm: area === "" ? null : parseFloat(area),
+        built_year: builtYear === "" ? null : parseInt(builtYear, 10),
+        structure: structure === "" ? null : structure,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `更新に失敗しました (HTTP ${res.status})`);
+    }
+  } catch (err) {
+    showError(err.message);
+  }
+});
+
+map.on("moveend", loadPropertiesInView);
+loadPropertiesInView();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>検索履歴 - いぬきんじょ管理画面</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="admin-container">
+  <h1 style="font-size:1.4rem;">利用者の検索履歴</h1>
+  <p style="color:#6b7280; font-size:0.9rem;">
+    利用者が居抜き物件を検索した場所・条件・表示できた件数を常に記録しています。
+    「この場所で検索」ボタンから、その場所でGoogle Places APIをリアルタイムに検索できます。
+  </p>
+
+  <div id="error" class="admin-error" style="display:none;"></div>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>検索日時</th>
+          <th>緯度・経度</th>
+          <th>半径(km)</th>
+          <th>営業状態</th>
+          <th>業種タグ</th>
+          <th>表示件数</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="request-rows"></tbody>
+    </table>
+  </div>
+
+  <div id="search-results-card" class="admin-card" style="display:none;">
+    <h2 style="font-size:1.05rem; margin-top:0;">Google Places API検索結果</h2>
+    <p style="font-size:0.8rem; color:#6b7280;">
+      内容を確認し、「登録する」を押した候補のみが居抜き物件データベースに反映されます。
+    </p>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>名称</th>
+          <th>営業状態</th>
+          <th>業種タグ</th>
+          <th>住所</th>
+          <th>状態</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="search-result-rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+requireLogin();
+renderAdminNav("search_requests");
+
+async function loadRequests() {
+  const errorEl = document.getElementById("error");
+  errorEl.style.display = "none";
+  try {
+    const res = await adminFetch("/admin/search-requests");
+    if (!res.ok) throw new Error(`一覧の取得に失敗しました (HTTP ${res.status})`);
+    const data = await res.json();
+    const tbody = document.getElementById("request-rows");
+    tbody.innerHTML = "";
+
+    for (const r of data.search_requests) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${new Date(r.created_at).toLocaleString("ja-JP")}</td>
+        <td>${r.latitude.toFixed(4)}, ${r.longitude.toFixed(4)}</td>
+        <td>${r.radius_km}</td>
+        <td>${r.business_status || "-"}</td>
+        <td>${(r.types || []).join(", ") || "-"}</td>
+        <td>${r.result_count}</td>
+        <td><button class="admin-btn search-here-btn"
+              data-id="${r.search_request_id}"
+              data-lat="${r.latitude}" data-lng="${r.longitude}" data-radius="${r.radius_km}">
+              この場所で検索
+            </button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    tbody.querySelectorAll(".search-here-btn").forEach((btn) => {
+      btn.addEventListener("click", () => executePlacesSearch(btn.dataset));
+    });
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  }
+}
+
+async function executePlacesSearch(data) {
+  const errorEl = document.getElementById("error");
+  errorEl.style.display = "none";
+  try {
+    const res = await adminFetch("/admin/places-search", {
+      method: "POST",
+      body: JSON.stringify({
+        search_request_id: data.id,
+        latitude: parseFloat(data.lat),
+        longitude: parseFloat(data.lng),
+        radius_km: parseFloat(data.radius),
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `検索に失敗しました (HTTP ${res.status})`);
+    }
+    const body = await res.json();
+    renderSearchResults(body.results);
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  }
+}
+
+function renderSearchResults(results) {
+  document.getElementById("search-results-card").style.display = "block";
+  const tbody = document.getElementById("search-result-rows");
+  tbody.innerHTML = "";
+
+  if (results.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">検索結果が見つかりませんでした。</td></tr>`;
+    return;
+  }
+
+  for (const r of results) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.name}</td>
+      <td>${r.business_status}</td>
+      <td>${(r.types || []).join(", ")}</td>
+      <td>${r.address || "-"}</td>
+      <td>${r.is_registered ? "登録済み" : "未登録"}</td>
+      <td>${
+        r.is_registered
+          ? "-"
+          : `<button class="admin-btn register-btn" data-id="${r.result_id}">登録する</button>`
+      }</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  tbody.querySelectorAll(".register-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const res = await adminFetch(`/admin/places-search/${btn.dataset.id}/register`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.detail || "登録に失敗しました");
+        btn.disabled = false;
+        return;
+      }
+      btn.closest("tr").querySelector("td:nth-child(5)").textContent = "登録済み";
+      btn.outerHTML = "-";
+    });
+  });
+}
+
+loadRequests();
+</script>
+
+</body>
+</html>
