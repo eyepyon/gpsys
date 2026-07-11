@@ -14,12 +14,6 @@
   <div id="error" class="admin-error" style="display:none;"></div>
 
   <div class="admin-card">
-    <h2 style="font-size:1.05rem; margin-top:0;">市町村別データ数（地域資源）</h2>
-    <table class="admin-table"><thead><tr><th>市町村</th><th>件数</th></tr></thead>
-      <tbody id="muni-resources-rows"></tbody></table>
-  </div>
-
-  <div class="admin-card">
     <h2 style="font-size:1.05rem; margin-top:0;">市町村別データ数（居抜き物件候補）</h2>
     <table class="admin-table"><thead><tr><th>市町村</th><th>件数</th></tr></thead>
       <tbody id="muni-vacant-rows"></tbody></table>
@@ -31,21 +25,6 @@
       <tbody id="type-rows"></tbody></table>
   </div>
 
-  <div class="admin-card">
-    <h2 style="font-size:1.05rem; margin-top:0;">カテゴリ別クラスタ数（地域資源）</h2>
-    <table class="admin-table"><thead><tr><th>カテゴリ</th><th>件数</th></tr></thead>
-      <tbody id="cluster-rows"></tbody></table>
-  </div>
-
-  <div class="admin-card">
-    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB分布（embeddingの2次元圧縮散布図）</h2>
-    <p style="font-size:0.8rem; color:#6b7280;">
-      768次元のembeddingを軽量な乱数射影により2次元に圧縮した近似的な散布図です。
-      厳密なPCA/t-SNEではなく、大まかな分布傾向の把握を目的としています。
-      色はカテゴリ別に自動割当てしています。
-    </p>
-    <canvas id="vector-canvas" width="900" height="500" style="max-width:100%; border:1px solid #e5e7eb; border-radius:8px;"></canvas>
-  </div>
 </div>
 
 <script src="common.js"></script>
@@ -60,51 +39,6 @@ function fillTable(id, rows, keyName, valueName) {
     .join("");
 }
 
-function categoryColor(category) {
-  // カテゴリ文字列から決定的にHSL色相を割り当てる（外部ライブラリ不使用）。
-  let hash = 0;
-  for (let i = 0; i < category.length; i++) {
-    hash = (hash * 31 + category.charCodeAt(i)) % 360;
-  }
-  return `hsl(${hash}, 65%, 50%)`;
-}
-
-function drawScatter(points) {
-  const canvas = document.getElementById("vector-canvas");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (points.length === 0) {
-    ctx.fillStyle = "#9ca3af";
-    ctx.fillText("データがありません", 20, 30);
-    return;
-  }
-
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = 30;
-
-  function scaleX(x) {
-    if (maxX === minX) return canvas.width / 2;
-    return pad + ((x - minX) / (maxX - minX)) * (canvas.width - pad * 2);
-  }
-  function scaleY(y) {
-    if (maxY === minY) return canvas.height / 2;
-    return canvas.height - pad - ((y - minY) / (maxY - minY)) * (canvas.height - pad * 2);
-  }
-
-  for (const p of points) {
-    ctx.beginPath();
-    ctx.arc(scaleX(p.x), scaleY(p.y), 4, 0, 2 * Math.PI);
-    ctx.fillStyle = categoryColor(p.category);
-    ctx.globalAlpha = 0.75;
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
 async function load() {
   const errorEl = document.getElementById("error");
   try {
@@ -112,11 +46,8 @@ async function load() {
     if (!res.ok) throw new Error(`統計情報の取得に失敗しました (HTTP ${res.status})`);
     const data = await res.json();
 
-    fillTable("muni-resources-rows", data.municipality_counts_resources, "municipality", "count");
     fillTable("muni-vacant-rows", data.municipality_counts_vacant_properties, "municipality", "count");
     fillTable("type-rows", data.type_counts, "type_tag", "count");
-    fillTable("cluster-rows", data.cluster_counts, "category", "count");
-    drawScatter(data.vector_points);
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.style.display = "block";

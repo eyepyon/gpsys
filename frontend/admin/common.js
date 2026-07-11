@@ -3,8 +3,7 @@
 // - APIRunのベースURLとセッショントークンをlocalStorageで管理する。
 // - fetch()のラッパー（Authorizationヘッダーの自動付与、401時のログイン画面への
 //   リダイレクト）を提供する。
-// - すべての管理画面ページ（dashboard.html, resources.html, requests.html,
-//   stats.html, users.html）から読み込む共通スクリプト。
+// - すべての管理画面ページから読み込む共通スクリプト。
 
 const ADMIN_BASE_URL_KEY = "admin_api_base_url";
 const ADMIN_SESSION_TOKEN_KEY = "admin_session_token";
@@ -85,10 +84,8 @@ function renderAdminNav(activePage) {
   nav.className = "admin-nav";
   const links = [
     { href: "dashboard.html", label: "ダッシュボード", key: "dashboard" },
-    { href: "resources.html", label: "データ更新", key: "resources" },
     { href: "vacant_properties.html", label: "居抜き物件", key: "vacant_properties" },
     { href: "search_requests.html", label: "検索履歴", key: "search_requests" },
-    { href: "requests.html", label: "更新依頼", key: "requests" },
     { href: "stats.html", label: "統計情報", key: "stats" },
     { href: "users.html", label: "管理ユーザー", key: "users" },
   ];
