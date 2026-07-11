@@ -35,6 +35,16 @@
     </table>
   </div>
 
+  <div class="admin-card">
+    <h2 style="font-size:1.05rem; margin-top:0;">検索起点テンプレート</h2>
+    <p style="font-size:0.8rem; color:#6b7280;">
+      国土交通省「国土数値情報 鉄道データ（2023年）」を加工した駅位置と、県庁所在地主要駅を登録します。
+      登録後は10分ごとのJOBが未処理地点から順番に探索します。
+    </p>
+    <div id="template-buttons" style="display:flex; gap:0.6rem; flex-wrap:wrap;"></div>
+    <p id="template-result" style="font-size:0.85rem; color:#374151;"></p>
+  </div>
+
   <div id="search-results-card" class="admin-card" style="display:none;">
     <h2 style="font-size:1.05rem; margin-top:0;">Google Places API検索結果</h2>
     <p style="font-size:0.8rem; color:#6b7280;">
@@ -60,6 +70,34 @@
 <script>
 requireLogin();
 renderAdminNav("search_requests");
+
+async function loadTemplates() {
+  const res = await adminFetch("/admin/search-origin-templates");
+  if (!res.ok) return;
+  const data = await res.json();
+  const templates = [
+    ...data.station_groups,
+    { name: "県庁所在地", count: data.prefectural_capitals_count },
+  ];
+  const container = document.getElementById("template-buttons");
+  for (const template of templates) {
+    const button = document.createElement("button");
+    button.className = "admin-btn";
+    button.textContent = `${template.name}（${template.count}件）`;
+    button.addEventListener("click", async () => {
+      if (!confirm(`${template.name}の${template.count}地点を検索起点として登録しますか？`)) return;
+      button.disabled = true;
+      const response = await adminFetch(`/admin/search-origin-templates/${encodeURIComponent(template.name)}`, { method: "POST" });
+      const body = await response.json().catch(() => ({}));
+      button.disabled = false;
+      document.getElementById("template-result").textContent = response.ok
+        ? `${body.registered_count}件を登録しました。`
+        : body.detail || "登録に失敗しました。";
+      if (response.ok) loadRequests();
+    });
+    container.appendChild(button);
+  }
+}
 
 async function loadRequests() {
   const errorEl = document.getElementById("error");
@@ -169,6 +207,7 @@ function renderSearchResults(results) {
 }
 
 loadRequests();
+loadTemplates();
 </script>
 
 </body>

@@ -1418,6 +1418,11 @@ class SearchOriginCreateBody(BaseModel):
     longitude: float = Field(ge=-180, le=180)
 
 
+class TemplateRegisterResponseBody(BaseModel):
+    template_group: str
+    registered_count: int
+
+
 def _search_request_to_body(request: SearchRequest) -> SearchRequestBody:
     return SearchRequestBody(
         search_request_id=str(request.search_request_id),
@@ -1464,6 +1469,48 @@ async def admin_create_search_origin(
         result_count=0,
     )
     return _search_request_to_body(request)
+
+
+@app.get("/admin/search-origin-templates")
+async def admin_list_search_origin_templates(
+    _current_user: AdminUser = Depends(get_current_admin_user),
+) -> dict[str, object]:
+    stations = json.loads((Path.cwd() / "data/templates/stations.json").read_text(encoding="utf-8"))
+    capitals = json.loads((Path.cwd() / "data/templates/prefectural_capitals.json").read_text(encoding="utf-8"))
+    return {
+        "station_groups": [
+            {"name": name, "count": len(points)}
+            for name, points in stations["groups"].items()
+        ],
+        "prefectural_capitals_count": len(capitals["points"]),
+        "source": stations["source"],
+    }
+
+
+@app.post("/admin/search-origin-templates/{template_group}", response_model=TemplateRegisterResponseBody)
+async def admin_register_search_origin_template(
+    template_group: str,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    repository: SearchRequestRepository = Depends(get_search_request_repository),
+) -> TemplateRegisterResponseBody:
+    if template_group == "県庁所在地":
+        data = json.loads((Path.cwd() / "data/templates/prefectural_capitals.json").read_text(encoding="utf-8"))
+        points = data["points"]
+    else:
+        data = json.loads((Path.cwd() / "data/templates/stations.json").read_text(encoding="utf-8"))
+        points = data["groups"].get(template_group)
+        if points is None:
+            raise HTTPException(status_code=404, detail="テンプレートが見つかりません")
+    for point in points:
+        await record_search_request(
+            repository,
+            location=GeoPoint(latitude=point["latitude"], longitude=point["longitude"]),
+            radius_km=10.0,
+            business_status=BusinessStatus.CLOSED_PERMANENTLY,
+            types=None,
+            result_count=0,
+        )
+    return TemplateRegisterResponseBody(template_group=template_group, registered_count=len(points))
 
 
 class PlacesSearchExecuteRequestBody(BaseModel):
