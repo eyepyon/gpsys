@@ -15,6 +15,16 @@ variable "service_name" {
   type        = string
 }
 
+variable "service_account_id" {
+  description = <<-EOT
+    InferRun実行用サービスアカウントのaccount_id。
+    GCPの制約でaccount_idは6〜30文字である必要があるため、
+    `service_name`（環境サフィックス込みで30文字を超える場合がある）とは
+    別に、短い専用の値をルート構成側から渡す。
+  EOT
+  type        = string
+}
+
 variable "image" {
   description = "推論サービス（Gemma 4 12B QAT）のコンテナイメージURL"
   type        = string

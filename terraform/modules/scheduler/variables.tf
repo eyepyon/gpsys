@@ -16,6 +16,16 @@ variable "scheduler_job_name" {
   default     = "vacant-property-sync-trigger"
 }
 
+variable "service_account_id" {
+  description = <<-EOT
+    Cloud Scheduler実行用サービスアカウントのaccount_id。
+    GCPの制約でaccount_idは6〜30文字である必要があるため、
+    `scheduler_job_name`（環境サフィックス込みで30文字を超える場合がある）とは
+    別に、短い専用の値をルート構成側から渡す。
+  EOT
+  type        = string
+}
+
 variable "schedule" {
   description = "実行スケジュール（unix-cron形式）"
   type        = string

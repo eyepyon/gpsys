@@ -10,7 +10,7 @@
 
 resource "google_service_account" "scheduler_sa" {
   project      = var.project_id
-  account_id   = "${var.scheduler_job_name}-sa"
+  account_id   = var.service_account_id
   display_name = "Cloud Scheduler (居抜き物件同期トリガー) 実行用サービスアカウント"
 }
 

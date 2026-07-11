@@ -11,7 +11,7 @@
 
 resource "google_service_account" "infer_run_sa" {
   project      = var.project_id
-  account_id   = "${var.service_name}-sa"
+  account_id   = var.service_account_id
   display_name = "InferRun (推論サービス) 実行用サービスアカウント"
 }
 

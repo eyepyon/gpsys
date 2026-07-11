@@ -126,9 +126,13 @@ module "storage" {
 # 参照する（cloudrun_appは実行アイデンティティとして、cloudrun_inferenceは
 # invoker権限の付与先として）ため、モジュール間の循環参照を避けるべく
 # ルート構成側で作成する。
+# サービスアカウントのaccount_idはGCPの制約で6〜30文字である必要がある。
+# `${var.app_service_name}-sa-${var.environment}`
+# （例: "regional-revitalization-api-sa-dev"）は30文字を超えるため、
+# 短縮した固定のaccount_idを使用する。
 resource "google_service_account" "app_run_sa" {
   project      = var.project_id
-  account_id   = "${var.app_service_name}-sa-${var.environment}"
+  account_id   = "api-run-sa-${var.environment}"
   display_name = "APIRun (アプリ本体サービス) 実行用サービスアカウント"
 }
 
@@ -139,6 +143,7 @@ module "cloudrun_inference" {
   project_id                    = var.project_id
   region                        = var.region
   service_name                  = "${var.inference_service_name}-${var.environment}"
+  service_account_id            = "infer-run-sa-${var.environment}"
   image                         = var.inference_image
   vpc_connector_id              = module.network.connector_id
   invoker_service_account_email = google_service_account.app_run_sa.email
@@ -182,6 +187,7 @@ module "scheduler" {
   project_id         = var.project_id
   region             = var.region
   scheduler_job_name = "${var.vacant_sync_job_name}-trigger-${var.environment}"
+  service_account_id = "vacant-sync-sched-sa-${var.environment}"
   schedule           = var.vacant_sync_schedule
   time_zone          = var.vacant_sync_time_zone
   target_job_name    = module.vacant_property_sync.job_name
