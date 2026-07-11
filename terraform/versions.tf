@@ -9,13 +9,19 @@ terraform {
   required_version = ">= 1.5.0"
 
   required_providers {
+    # 【重要】google/google-betaは6.5以上が必須。
+    # `google_cloud_run_v2_service`の`node_selector`ブロック（GPU割り当てに
+    # 使用、cloudrun_inferenceモジュール参照）は、google-betaプロバイダの
+    # v6.5.0（2024年9月30日リリース）で追加され、v7.1.0でGA機能に昇格した。
+    # 5.x系には存在しないため、5.x系を指定すると
+    # `Unsupported block type: node_selector`エラーで`terraform validate`が失敗する。
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.40"
+      version = ">= 6.5, < 8.0"
     }
     google-beta = {
       source  = "hashicorp/google-beta"
-      version = "~> 5.40"
+      version = ">= 6.5, < 8.0"
     }
     random = {
       source  = "hashicorp/random"
