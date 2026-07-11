@@ -79,6 +79,16 @@ variable "memory" {
   default     = "16Gi"
 }
 
+variable "gpu_zonal_redundancy_disabled" {
+  description = <<-EOT
+    GPUゾーン冗長性を無効化するかどうか。ゾーン冗長性の有効化には専用の
+    GPU quota申請が必要なため、デフォルトはtrue（無効化）とする。
+    quotaを確保済みで高可用性を重視する本番環境ではfalseに変更すること。
+  EOT
+  type        = bool
+  default     = true
+}
+
 variable "labels" {
   description = "リソースに付与する共通ラベル"
   type        = map(string)

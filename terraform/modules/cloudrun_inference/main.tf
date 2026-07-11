@@ -50,6 +50,15 @@ resource "google_cloud_run_v2_service" "inference" {
       accelerator = var.gpu_type
     }
 
+    # GPUゾーン冗長性（複数ゾーンにGPUインスタンスを分散配置する機能）は、
+    # 既定で有効だが、有効にするには専用の higher GPU quota が必要となる
+    # （プロジェクトによっては未割り当てで`400 You do not have quota for
+    # using GPUs with zonal redundancy`エラーになる）。開発環境では
+    # ゾーン冗長性を無効化し、通常のGPU quotaのみで動作するようにする。
+    # 本番運用で高可用性が必要な場合は、GCPサポートにゾーン冗長GPU quotaの
+    # 追加を申請した上でこの設定をtrueから変更（=falseへ）すること。
+    gpu_zonal_redundancy_disabled = var.gpu_zonal_redundancy_disabled
+
     containers {
       image = var.image
 
