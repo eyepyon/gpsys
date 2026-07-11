@@ -328,6 +328,7 @@ async def _bootstrap_production_dependencies() -> None:
                 pool = await asyncpg.create_pool(**db_connection)
             else:
                 pool = await asyncpg.create_pool(database_url)
+            await _ensure_admin_schema(pool)
             set_resource_repository(PostgresResourceRepository(pool))
             set_vacant_property_repository(
                 PostgresVacantPropertyRepository(pool)
@@ -392,6 +393,33 @@ async def _bootstrap_production_dependencies() -> None:
         except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
             logger.exception("Places APIクライアントの初期化に失敗しました")
             raise
+
+
+async def _ensure_admin_schema(pool: object) -> None:
+    """Create the authentication tables required before admin bootstrap."""
+    await pool.execute(  # type: ignore[attr-defined]
+        """
+        CREATE TABLE IF NOT EXISTS admin_users (
+            admin_user_id UUID PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'full_admin',
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        CREATE TABLE IF NOT EXISTS admin_sessions (
+            session_token TEXT PRIMARY KEY,
+            admin_user_id UUID NOT NULL REFERENCES admin_users(admin_user_id)
+                ON DELETE CASCADE,
+            expires_at TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_user_id
+            ON admin_sessions (admin_user_id);
+        """
+    )
 
 
 async def _bootstrap_initial_admin_user(
