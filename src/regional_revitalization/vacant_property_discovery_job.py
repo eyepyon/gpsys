@@ -37,7 +37,9 @@ async def run() -> None:
             """SELECT search_request_id,
                       ST_Y(location::geometry) latitude,
                       ST_X(location::geometry) longitude
-               FROM search_requests ORDER BY created_at DESC LIMIT 500"""
+               FROM search_requests
+               WHERE processed_at IS NULL
+               ORDER BY created_at ASC LIMIT 500"""
         )
         seeds: list[tuple[object, GeoPoint]] = []
         for row in rows:
@@ -82,6 +84,11 @@ async def run() -> None:
                 place.location.longitude, place.location.latitude,
                 place.business_status.value, place.types, place.address,
                 place.phone_number, now,
+            )
+        if seeds:
+            await pool.execute(
+                "UPDATE search_requests SET processed_at=now() WHERE search_request_id=ANY($1::uuid[])",
+                [request_id for request_id, _ in seeds],
             )
     finally:
         await pool.close()
