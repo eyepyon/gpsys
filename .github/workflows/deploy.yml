@@ -107,6 +107,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: ${{ matrix.target }} イメージのビルド・プッシュ
+        id: build_push
+        continue-on-error: true
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -117,6 +119,29 @@ jobs:
             ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/${{ matrix.image_name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # provenance/sbomのアテステーションを無効化する。buildxのデフォルト
+          # 動作ではアテステーション用の追加manifestリクエストがpush後に
+          # 発生し、Artifact Registryへのトークン再要求時に
+          # 「failed to authorize: DeadlineExceeded」が発生することがある
+          # （既知の問題）。無効化することでpush処理をシンプルにし、
+          # 一時的なネットワーク・認証タイムアウトの発生を抑える。
+          provenance: false
+          sbom: false
+
+      - name: ${{ matrix.target }} イメージのビルド・プッシュ（リトライ）
+        if: steps.build_push.outcome == 'failure'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/${{ matrix.target }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/${{ matrix.image_name }}:${{ steps.image_tag.outputs.tag }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/${{ matrix.image_name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
 
   terraform-apply:
     name: Terraformの適用
