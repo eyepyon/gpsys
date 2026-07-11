@@ -83,9 +83,12 @@ module "network" {
 
   project_id     = var.project_id
   region         = var.region
-  network_name   = var.vpc_network_name
-  ip_cidr_range  = var.vpc_connector_cidr
-  connector_name = "regional-revit-connector-${var.environment}"
+  network_name  = var.vpc_network_name
+  ip_cidr_range = var.vpc_connector_cidr
+  # VPCコネクタ名はGCPの制約で最大25文字（^[a-z][-a-z0-9]{0,23}[a-z0-9]$）。
+  # "regional-revit-connector-${var.environment}"（例: "regional-revit-connector-dev"）
+  # は29文字となり超過するため、短縮した名前を使用する。
+  connector_name = "rr-connector-${var.environment}"
 
   depends_on = [google_project_service.apis]
 }
@@ -104,6 +107,8 @@ module "cloudsql" {
   network_self_link      = module.network.network_self_link
   private_vpc_connection = module.network.private_vpc_connection
   labels                 = var.labels
+
+  depends_on = [google_project_service.apis]
 }
 
 # --- storage: 地域資源ファイル保存用バケット ---
@@ -178,6 +183,8 @@ module "vacant_property_sync" {
   db_connection_secret_id = module.cloudsql.db_connection_secret_id
   places_api_key          = var.places_api_key
   labels                  = var.labels
+
+  depends_on = [google_project_service.apis]
 }
 
 # --- scheduler: 居抜き物件同期サービスの定期トリガー ---
