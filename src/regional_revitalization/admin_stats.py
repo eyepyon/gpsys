@@ -185,19 +185,13 @@ class PostgresAdminStatsRepository:
         self._pool = pool
 
     async def get_dashboard_summary(self) -> DashboardSummary:
-        resource_count = await self._pool.fetchval(
-            "SELECT COUNT(*) FROM regional_resources"
+        resource_count = await self._count_rows("regional_resources")
+        vacant_count = await self._count_rows("vacant_property_candidates")
+        consultation_count = await self._count_rows("consultation_logs")
+        pending_count = await self._count_rows(
+            "resource_update_requests", "status = 'pending'"
         )
-        vacant_count = await self._pool.fetchval(
-            "SELECT COUNT(*) FROM vacant_property_candidates"
-        )
-        consultation_count = await self._pool.fetchval(
-            "SELECT COUNT(*) FROM consultation_logs"
-        )
-        pending_count = await self._pool.fetchval(
-            "SELECT COUNT(*) FROM resource_update_requests WHERE status = 'pending'"
-        )
-        admin_count = await self._pool.fetchval("SELECT COUNT(*) FROM admin_users")
+        admin_count = await self._count_rows("admin_users")
         return DashboardSummary(
             regional_resource_count=int(resource_count),
             vacant_property_count=int(vacant_count),
@@ -205,6 +199,25 @@ class PostgresAdminStatsRepository:
             pending_update_request_count=int(pending_count),
             admin_user_count=int(admin_count),
         )
+
+    async def _count_rows(self, table_name: str, where: str | None = None) -> int:
+        """Count a known dashboard table, treating an absent table as empty."""
+        allowed_tables = {
+            "regional_resources",
+            "vacant_property_candidates",
+            "consultation_logs",
+            "resource_update_requests",
+            "admin_users",
+        }
+        if table_name not in allowed_tables:
+            raise ValueError(f"Unsupported dashboard table: {table_name}")
+        exists = await self._pool.fetchval("SELECT to_regclass($1)", table_name)
+        if exists is None:
+            return 0
+        query = f"SELECT COUNT(*) FROM {table_name}"
+        if where:
+            query += f" WHERE {where}"
+        return int(await self._pool.fetchval(query))
 
     async def get_municipality_counts_resources(self) -> list[MunicipalityCount]:
         rows = await self._pool.fetch(
