@@ -183,7 +183,16 @@ resource "google_secret_manager_secret_version" "admin_initial_password" {
 # 居抜き物件同期サービス（vacant_property_sync_job）のPlaces APIキーとは
 # 別のシークレットとして分離し、APIRun実行用サービスアカウントにのみ
 # アクセス権限を付与する（用途ごとにアクセス制御・ローテーションを分離できる）。
+#
+# 【重要】admin_places_api_keyが空文字列（未設定）の場合、Secret自体を
+# 作成しない（count=0）。Google Secret Manager APIは空文字列のpayloadを
+# 受け付けず「Field [payload] is required」エラーになるため、値が実際に
+# 設定されている場合のみリソースを作成する。この機能はオプトインであり、
+# 未設定時はAPIRun側もADMIN_PLACES_API_KEY環境変数自体を注入しない
+# （modules/cloudrun_app/main.tf参照）。
 resource "google_secret_manager_secret" "admin_places_api_key" {
+  count = var.admin_places_api_key != "" ? 1 : 0
+
   project   = var.project_id
   secret_id = "admin-places-api-key-${var.environment}"
 
@@ -197,7 +206,9 @@ resource "google_secret_manager_secret" "admin_places_api_key" {
 }
 
 resource "google_secret_manager_secret_version" "admin_places_api_key" {
-  secret      = google_secret_manager_secret.admin_places_api_key.id
+  count = var.admin_places_api_key != "" ? 1 : 0
+
+  secret      = google_secret_manager_secret.admin_places_api_key[0].id
   secret_data = var.admin_places_api_key
 }
 
@@ -218,7 +229,7 @@ module "cloudrun_app" {
   cors_allowed_origins             = var.app_cors_allowed_origins
   admin_initial_username           = var.admin_initial_username
   admin_initial_password_secret_id = google_secret_manager_secret.admin_initial_password.secret_id
-  admin_places_api_key_secret_id   = google_secret_manager_secret.admin_places_api_key.secret_id
+  admin_places_api_key_secret_id   = var.admin_places_api_key != "" ? google_secret_manager_secret.admin_places_api_key[0].secret_id : ""
   labels                           = var.labels
 }
 

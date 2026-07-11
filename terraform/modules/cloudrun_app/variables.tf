@@ -96,8 +96,14 @@ variable "admin_initial_password_secret_id" {
 }
 
 variable "admin_places_api_key_secret_id" {
-  description = "管理画面の「この場所でGoogle Places APIを検索する」機能用APIキーを格納したSecret ManagerシークレットのID"
+  description = <<-EOT
+    管理画面の「この場所でGoogle Places APIを検索する」機能用APIキーを
+    格納したSecret ManagerシークレットのID。空文字列の場合、この機能は
+    無効化され、ADMIN_PLACES_API_KEY環境変数自体を注入しない
+    （APIRunはモッククライアントのまま動作する）。
+  EOT
   type        = string
+  default     = ""
 }
 
 variable "cors_allowed_origins" {

@@ -26,7 +26,10 @@ resource "google_secret_manager_secret_iam_member" "app_run_admin_password_secre
 }
 
 # 管理画面のPlaces APIキーシークレットへの読み取り権限を付与する
+# （admin_places_api_key_secret_idが空文字列の場合はSecret自体が存在しないため付与しない）
 resource "google_secret_manager_secret_iam_member" "app_run_admin_places_key_secret_access" {
+  count = var.admin_places_api_key_secret_id != "" ? 1 : 0
+
   secret_id = var.admin_places_api_key_secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.service_account_email}"
@@ -106,12 +109,18 @@ resource "google_cloud_run_v2_service" "app" {
 
       # 管理画面の「この場所でGoogle Places APIを検索する」機能用。
       # 居抜き物件同期サービスのPlaces APIキーとは別のシークレットを使用する。
-      env {
-        name = "ADMIN_PLACES_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = var.admin_places_api_key_secret_id
-            version = "latest"
+      # admin_places_api_key_secret_idが空文字列の場合（Places APIキー未設定）は
+      # 環境変数自体を注入しない。APIRun側はADMIN_PLACES_API_KEY未設定時、
+      # モッククライアントのまま動作し実際のAPI呼び出しは行わない。
+      dynamic "env" {
+        for_each = var.admin_places_api_key_secret_id != "" ? [var.admin_places_api_key_secret_id] : []
+        content {
+          name = "ADMIN_PLACES_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = env.value
+              version = "latest"
+            }
           }
         }
       }

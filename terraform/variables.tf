@@ -203,6 +203,16 @@ variable "admin_initial_password" {
   EOT
   type        = string
   sensitive   = true
+
+  validation {
+    # 空文字列のままapplyすると、Secret Manager APIが
+    # 「Field [payload] is required」という分かりにくいエラーを返すため、
+    # ここで早期に分かりやすいエラーメッセージを出す。
+    # CI/CDのGitHub Secrets（ADMIN_INITIAL_PASSWORD）が未設定の場合に
+    # 空文字列が渡されるケースを想定している。
+    condition     = length(var.admin_initial_password) >= 8
+    error_message = "admin_initial_passwordは8文字以上である必要があります。GitHub Secrets等でADMIN_INITIAL_PASSWORDが設定されているか確認してください。"
+  }
 }
 
 variable "app_cors_allowed_origins" {
