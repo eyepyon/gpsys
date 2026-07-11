@@ -1,0 +1,89 @@
+name: CI
+
+# プルリクエスト・pushをトリガーに、単体テスト・Property-Based Test・
+# 結合テスト（エンコーディング統一確認テストを含む）を実行する。
+# 実DB/Docker/Terraform CLIに依存する統合テストは、該当環境が無いため
+# pytest内で自動的にスキップされる（tests/test_postgres_repository.py等）。
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_call: {} # deploy.ymlからデプロイ前テストとして呼び出すために必要
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: pytestによるテスト実行
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python ${{ matrix.python-version }} のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: 依存関係のインストール
+        run: pip install -e ".[dev,api,postgres,gcs]"
+
+      - name: pytestの実行
+        run: pytest -v
+
+  terraform-validate:
+    name: Terraformの構文検証
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Terraformのセットアップ
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: terraform fmt チェック
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+
+      - name: terraform init（バックエンド未接続、構文検証のみ）
+        working-directory: terraform
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        working-directory: terraform
+        run: terraform validate
+
+  docker-build-check:
+    name: Dockerイメージのビルド確認
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [api, infer, vacant_sync]
+
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Docker Buildxのセットアップ
+        uses: docker/setup-buildx-action@v3
+
+      - name: ${{ matrix.target }} イメージのビルド（プッシュなし）
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/${{ matrix.target }}/Dockerfile
+          push: false
+          tags: regional-revitalization-${{ matrix.target }}:ci-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

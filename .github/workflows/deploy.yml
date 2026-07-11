@@ -1,0 +1,153 @@
+name: Deploy
+
+# mainブランチへのpush（マージ）をトリガーに、以下を行う。
+#   1. APIRun / InferRun / 居抜き物件同期サービスの3つのコンテナイメージを
+#      ビルドし、Artifact Registryへプッシュする
+#   2. Terraformを適用し、Cloud Run / Cloud Run Jobs / Cloud SQL等を
+#      最新のイメージ・構成で更新する
+#
+# GCPへの認証はWorkload Identity Federation（キーレス認証）を用いる。
+# サービスアカウントキー（JSON）はリポジトリ・GitHub Secrets/Variablesの
+# いずれにも保存しない。
+#
+# 【Secrets / Variablesの使い分け】
+# プロジェクトID・サービスアカウントのメールアドレス・バケット名等、値自体に
+# 秘匿性が無い識別子はリポジトリの Variables（`vars.*`）として登録し、
+# DBパスワード・Places APIキー等の真に機密な値のみを Secrets（`secrets.*`）
+# として登録する（GitHub Actionsのログ上ではVariablesの値はマスクされない
+# ため、機密値を誤って登録しないよう注意すること）。
+#
+# 【前提】本ワークフローの実行には、事前にTerraformで以下を作成しておく
+# 必要がある（`terraform/modules/github_actions_wif`モジュール、
+# `enable_github_actions_wif = true`での適用、および
+# tfstate/アプリファイル共用のGCSバケットの作成）。詳細は
+# docs/deployment-guide.md を参照。
+#   - Workload Identityプール・プロバイダ
+#   - デプロイ用サービスアカウント（GitHub Actionsがなりすます対象）
+#   - Terraformのtfstateとアプリの地域資源ファイルを共用するGCSバケット
+#     （`terraform/state/`と`resources/`のプレフィックス（フォルダ相当）で
+#     用途を分離する。詳細はdocs/deployment-guide.md参照）
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "terraform/**"
+      - "migrations/**"
+      - "docker/**"
+      - "pyproject.toml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+    inputs:
+      apply_terraform:
+        description: "trueの場合、イメージのビルド・プッシュ後にterraform applyを実行する"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federationによるキーレス認証に必要
+
+env:
+  REGION: us-central1
+
+jobs:
+  test:
+    name: デプロイ前テスト
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    name: コンテナイメージのビルド・プッシュ
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: api
+            image_name: api
+          - target: infer
+            image_name: infer
+          - target: vacant_sync
+            image_name: vacant-sync
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.tag }}
+
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: イメージタグの決定（コミットSHA）
+        id: image_tag
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: GCPへの認証（Workload Identity Federation）
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Artifact Registryへのdocker認証設定
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Docker Buildxのセットアップ
+        uses: docker/setup-buildx-action@v3
+
+      - name: ${{ matrix.target }} イメージのビルド・プッシュ
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/${{ matrix.target }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/${{ matrix.image_name }}:${{ steps.image_tag.outputs.tag }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/${{ matrix.image_name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  terraform-apply:
+    name: Terraformの適用
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || inputs.apply_terraform }}
+    environment: production
+
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: GCPへの認証（Workload Identity Federation）
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Terraformのセットアップ
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: terraform init
+        working-directory: terraform
+        run: terraform init -backend-config="bucket=${{ vars.GCP_BUCKET_NAME }}"
+
+      - name: terraform plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -input=false \
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="app_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/api:${{ needs.build-and-push.outputs.image_tag }}" \
+            -var="inference_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/infer:${{ needs.build-and-push.outputs.image_tag }}" \
+            -var="vacant_sync_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/vacant-sync:${{ needs.build-and-push.outputs.image_tag }}" \
+            -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
+            -var="storage_bucket_name=${{ vars.GCP_BUCKET_NAME }}" \
+            -var="places_api_key=${{ secrets.PLACES_API_KEY }}" \
+            -var="enable_github_actions_wif=true" \
+            -var="github_repository=${{ github.repository }}" \
+            -out=tfplan
+
+      - name: terraform apply
+        working-directory: terraform
+        run: terraform apply -input=false -auto-approve tfplan
