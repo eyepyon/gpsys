@@ -12,8 +12,11 @@
 <div class="admin-login-wrap admin-card">
   <h1 style="font-size:1.3rem; margin-top:0;">いぬきんじょ管理画面</h1>
   <form id="login-form" class="admin-form">
-    <label>APIRunのベースURL</label>
-    <input id="base_url" type="text" placeholder="https://regional-revitalization-api-dev-xxxxx.a.run.app" />
+    <input
+      id="base_url"
+      type="hidden"
+      value="https://regional-revitalization-api-dev-804626259225.us-central1.run.app"
+    />
 
     <label>ユーザー名</label>
     <input id="username" type="text" autocomplete="username" required />
@@ -28,8 +31,6 @@
 
 <script src="common.js"></script>
 <script>
-document.getElementById("base_url").value = getApiBaseUrl();
-
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const errorEl = document.getElementById("error");
@@ -39,11 +40,6 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
 
-  if (!baseUrl) {
-    errorEl.textContent = "APIRunのベースURLを入力してください";
-    errorEl.style.display = "block";
-    return;
-  }
   setApiBaseUrl(baseUrl);
 
   try {
