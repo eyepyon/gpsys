@@ -1411,6 +1411,13 @@ class SearchRequestListResponseBody(BaseModel):
     search_requests: list[SearchRequestBody]
 
 
+class SearchOriginCreateBody(BaseModel):
+    """管理画面の地図から登録するJOB検索起点。"""
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
 def _search_request_to_body(request: SearchRequest) -> SearchRequestBody:
     return SearchRequestBody(
         search_request_id=str(request.search_request_id),
@@ -1439,6 +1446,24 @@ async def admin_list_search_requests(
     return SearchRequestListResponseBody(
         search_requests=[_search_request_to_body(r) for r in requests]
     )
+
+
+@app.post("/admin/search-origins", response_model=SearchRequestBody, status_code=201)
+async def admin_create_search_origin(
+    body: SearchOriginCreateBody,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    repository: SearchRequestRepository = Depends(get_search_request_repository),
+) -> SearchRequestBody:
+    """右クリック地点を10km圏の閉鎖店舗探索起点として登録する。"""
+    request = await record_search_request(
+        repository,
+        location=GeoPoint(latitude=body.latitude, longitude=body.longitude),
+        radius_km=10.0,
+        business_status=BusinessStatus.CLOSED_PERMANENTLY,
+        types=None,
+        result_count=0,
+    )
+    return _search_request_to_body(request)
 
 
 class PlacesSearchExecuteRequestBody(BaseModel):

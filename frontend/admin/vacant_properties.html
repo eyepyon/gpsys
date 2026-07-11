@@ -15,6 +15,7 @@
   <p style="color:#6b7280; font-size:0.9rem;">
     マップを移動・ズームすると、その表示範囲内の居抜き物件候補がピンで表示されます。
     ピンをクリックすると、賃料・面積・築年数・構造（管理画面専用の手動編集項目）を編集できます。
+    マップ上を右クリックすると、その地点を10km圏の閉鎖店舗検索起点として登録できます。
   </p>
 
   <div id="error" class="admin-error" style="display:none;"></div>
@@ -60,6 +61,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 let markers = {};
 let selectedPlaceId = null;
+let originMarker = null;
 
 function showError(message) {
   const el = document.getElementById("error");
@@ -150,6 +152,32 @@ document.getElementById("edit-form").addEventListener("submit", async (e) => {
 });
 
 map.on("moveend", loadPropertiesInView);
+map.on("contextmenu", async (event) => {
+  const { lat, lng } = event.latlng;
+  if (!confirm(`この地点を検索起点に登録しますか？\n緯度: ${lat.toFixed(6)}\n経度: ${lng.toFixed(6)}\n検索半径: 10km`)) {
+    return;
+  }
+  clearError();
+  try {
+    const res = await adminFetch("/admin/search-origins", {
+      method: "POST",
+      body: JSON.stringify({ latitude: lat, longitude: lng }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `検索起点の登録に失敗しました (HTTP ${res.status})`);
+    }
+    if (originMarker) map.removeLayer(originMarker);
+    originMarker = L.circleMarker([lat, lng], {
+      radius: 8,
+      color: "#dc2626",
+      fillColor: "#ef4444",
+      fillOpacity: 0.8,
+    }).addTo(map).bindTooltip("登録した検索起点（10km圏）").openTooltip();
+  } catch (err) {
+    showError(err.message);
+  }
+});
 loadPropertiesInView();
 </script>
 
