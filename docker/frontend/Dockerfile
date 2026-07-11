@@ -19,6 +19,7 @@ COPY frontend/terms.html /usr/share/nginx/html/terms.html
 COPY frontend/privacy.html /usr/share/nginx/html/privacy.html
 COPY frontend/faq.html /usr/share/nginx/html/faq.html
 COPY frontend/contact.html /usr/share/nginx/html/contact.html
+COPY frontend/favicon.svg /usr/share/nginx/html/favicon.svg
 COPY frontend/img/ /usr/share/nginx/html/img/
 COPY docker/frontend/default.conf.template /etc/nginx/templates/default.conf.template
 
