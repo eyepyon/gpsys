@@ -58,10 +58,9 @@ resource "google_service_account" "deployer" {
 # なりすまし（impersonation）を、上記デプロイ用サービスアカウントに限定して許可する。
 resource "google_service_account_iam_member" "deployer_workload_identity_binding" {
   service_account_id = google_service_account.deployer.name
-  role                = "roles/iam.workloadIdentityUser"
-  member              = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_actions.name}/attribute.repository/${var.github_repository}"
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_actions.name}/attribute.repository/${var.github_repository}"
 }
-
 
 # --- デプロイ用サービスアカウントへの最小権限ロール付与 ---
 #
