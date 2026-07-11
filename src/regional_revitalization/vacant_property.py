@@ -68,6 +68,13 @@ class VacantPropertyCandidate:
     last_review_time: datetime | None
     estimated_closure_period_start: datetime | None
     estimated_closure_period_end: datetime | None
+    # 以下はGoogle Places APIからは取得できない、管理画面での手動編集専用の
+    # 項目（Requirements: 管理画面のデータ編集メニュー）。フロント（利用者向け
+    # 画面）には表示しない。未入力の場合はいずれもNone。
+    rent_yen: int | None = None
+    area_sqm: float | None = None
+    built_year: int | None = None
+    structure: str | None = None
 
     def __post_init__(self) -> None:
         """`design.md`モデル4の検証ルールを検証する。
@@ -236,6 +243,33 @@ class VacantPropertyRepository(Protocol):
         """
         ...
 
+    def search_in_bounds(
+        self,
+        min_latitude: float,
+        min_longitude: float,
+        max_latitude: float,
+        max_longitude: float,
+        limit: int,
+    ) -> list[VacantPropertyCandidate]:
+        """指定した緯度経度の矩形範囲内にある居抜き物件候補を返す（管理画面のマップ表示用）。"""
+        ...
+
+    def update_details(
+        self,
+        place_id: str,
+        rent_yen: int | None,
+        area_sqm: float | None,
+        built_year: int | None,
+        structure: str | None,
+    ) -> None:
+        """管理画面での手動編集項目（賃料・面積・築年数・構造）を更新する。
+
+        `None`が渡された項目も含め、すべて指定値で上書きする
+        （値をクリアする操作にも対応するため、他の更新系メソッドとは異なり
+        COALESCEによる部分更新は行わない）。
+        """
+        ...
+
 
 class InMemoryVacantPropertyRepository:
     """テスト用のインメモリ`VacantPropertyRepository`実装。
@@ -298,6 +332,57 @@ class InMemoryVacantPropertyRepository:
             key=lambda candidate: haversine_distance_km(location, candidate.location)
         )
         return candidates[:limit]
+
+    def search_in_bounds(
+        self,
+        min_latitude: float,
+        min_longitude: float,
+        max_latitude: float,
+        max_longitude: float,
+        limit: int,
+    ) -> list[VacantPropertyCandidate]:
+        """緯度経度の矩形範囲内にある居抜き物件候補を、内部辞書の順序で最大`limit`件返す。"""
+        matched = [
+            candidate
+            for candidate in self._candidates_by_place_id.values()
+            if min_latitude <= candidate.location.latitude <= max_latitude
+            and min_longitude <= candidate.location.longitude <= max_longitude
+        ]
+        return matched[:limit]
+
+    def update_details(
+        self,
+        place_id: str,
+        rent_yen: int | None,
+        area_sqm: float | None,
+        built_year: int | None,
+        structure: str | None,
+    ) -> None:
+        """`place_id`に一致する居抜き物件候補の手動編集項目を上書きする。
+
+        Raises:
+            ValueError: 対象の`place_id`が見つからない場合。
+        """
+        existing = self._candidates_by_place_id.get(place_id)
+        if existing is None:
+            raise ValueError(f"居抜き物件候補が見つかりません: {place_id}")
+        self._candidates_by_place_id[place_id] = VacantPropertyCandidate(
+            place_id=existing.place_id,
+            name=existing.name,
+            location=existing.location,
+            business_status=existing.business_status,
+            types=existing.types,
+            address=existing.address,
+            phone_number=existing.phone_number,
+            data_fetched_at=existing.data_fetched_at,
+            last_review_time=existing.last_review_time,
+            estimated_closure_period_start=existing.estimated_closure_period_start,
+            estimated_closure_period_end=existing.estimated_closure_period_end,
+            rent_yen=rent_yen,
+            area_sqm=area_sqm,
+            built_year=built_year,
+            structure=structure,
+        )
 
     def __len__(self) -> int:
         """保持している居抜き物件候補の件数を返す（テストでの副作用確認に使用）。"""

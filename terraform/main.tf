@@ -182,20 +182,20 @@ resource "google_secret_manager_secret_version" "admin_initial_password" {
 module "cloudrun_app" {
   source = "./modules/cloudrun_app"
 
-  project_id                        = var.project_id
-  region                            = var.region
-  service_name                      = "${var.app_service_name}-${var.environment}"
-  service_account_email             = google_service_account.app_run_sa.email
-  image                             = var.app_image
-  vpc_connector_id                  = module.network.connector_id
-  db_connection_secret_id           = module.cloudsql.db_connection_secret_id
-  inference_service_url             = module.cloudrun_inference.service_url
-  storage_bucket_name               = module.storage.bucket_name
-  allow_unauthenticated             = var.app_allow_unauthenticated
-  cors_allowed_origins              = var.app_cors_allowed_origins
-  admin_initial_username            = var.admin_initial_username
-  admin_initial_password_secret_id  = google_secret_manager_secret.admin_initial_password.secret_id
-  labels                            = var.labels
+  project_id                       = var.project_id
+  region                           = var.region
+  service_name                     = "${var.app_service_name}-${var.environment}"
+  service_account_email            = google_service_account.app_run_sa.email
+  image                            = var.app_image
+  vpc_connector_id                 = module.network.connector_id
+  db_connection_secret_id          = module.cloudsql.db_connection_secret_id
+  inference_service_url            = module.cloudrun_inference.service_url
+  storage_bucket_name              = module.storage.bucket_name
+  allow_unauthenticated            = var.app_allow_unauthenticated
+  cors_allowed_origins             = var.app_cors_allowed_origins
+  admin_initial_username           = var.admin_initial_username
+  admin_initial_password_secret_id = google_secret_manager_secret.admin_initial_password.secret_id
+  labels                           = var.labels
 }
 
 # --- cloudrun_frontend: 動作確認用フロント画面 (inuki) ---

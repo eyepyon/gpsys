@@ -98,6 +98,9 @@ class PostgresVacantPropertyRepository:
                 estimated_closure_period_start = EXCLUDED.estimated_closure_period_start,
                 estimated_closure_period_end = EXCLUDED.estimated_closure_period_end,
                 updated_at = now()
+            -- 賃料・面積・築年数・構造（rent_yen/area_sqm/built_year/structure）は
+            -- Places APIには存在しない管理画面専用の手動編集項目のため、
+            -- UPSERT時のEXCLUDED上書き対象に含めない（既存の手動入力値を保持する）。
         """
         # プレースホルダ $1=place_id, $2=name, $3=longitude, $4=latitude,
         # $5=business_status, $6=types, $7=address, $8=phone_number,
@@ -153,7 +156,8 @@ class PostgresVacantPropertyRepository:
                 ST_X(location::geometry) AS longitude,
                 business_status, types, address, phone_number,
                 data_fetched_at, last_review_time,
-                estimated_closure_period_start, estimated_closure_period_end
+                estimated_closure_period_start, estimated_closure_period_end,
+                rent_yen, area_sqm, built_year, structure
             FROM vacant_property_candidates
             WHERE ST_DWithin(
                 location,
@@ -179,6 +183,52 @@ class PostgresVacantPropertyRepository:
         )
         return [_row_to_candidate(row) for row in rows]
 
+    async def search_in_bounds(
+        self,
+        min_latitude: float,
+        min_longitude: float,
+        max_latitude: float,
+        max_longitude: float,
+        limit: int,
+    ) -> list[VacantPropertyCandidate]:
+        """指定した緯度経度の矩形範囲内にある居抜き物件候補を返す（管理画面のマップ表示用）。"""
+        query = """
+            SELECT
+                place_id, name,
+                ST_Y(location::geometry) AS latitude,
+                ST_X(location::geometry) AS longitude,
+                business_status, types, address, phone_number,
+                data_fetched_at, last_review_time,
+                estimated_closure_period_start, estimated_closure_period_end,
+                rent_yen, area_sqm, built_year, structure
+            FROM vacant_property_candidates
+            WHERE location::geometry && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+            LIMIT $5
+        """
+        rows = await self._pool.fetch(
+            query, min_longitude, min_latitude, max_longitude, max_latitude, limit
+        )
+        return [_row_to_candidate(row) for row in rows]
+
+    async def update_details(
+        self,
+        place_id: str,
+        rent_yen: int | None,
+        area_sqm: float | None,
+        built_year: int | None,
+        structure: str | None,
+    ) -> None:
+        """管理画面での手動編集項目（賃料・面積・築年数・構造）を上書きする。"""
+        query = """
+            UPDATE vacant_property_candidates
+            SET rent_yen = $2, area_sqm = $3, built_year = $4, structure = $5,
+                updated_at = now()
+            WHERE place_id = $1
+        """
+        await self._pool.execute(
+            query, place_id, rent_yen, area_sqm, built_year, structure
+        )
+
 
 def _row_to_candidate(row: Any) -> VacantPropertyCandidate:
     """`asyncpg`が返す行データ（`asyncpg.Record`）を`VacantPropertyCandidate`に
@@ -203,4 +253,12 @@ def _row_to_candidate(row: Any) -> VacantPropertyCandidate:
         last_review_time=row["last_review_time"],
         estimated_closure_period_start=row["estimated_closure_period_start"],
         estimated_closure_period_end=row["estimated_closure_period_end"],
+        rent_yen=row["rent_yen"] if "rent_yen" in row else None,
+        area_sqm=(
+            float(row["area_sqm"])
+            if "area_sqm" in row and row["area_sqm"] is not None
+            else None
+        ),
+        built_year=row["built_year"] if "built_year" in row else None,
+        structure=row["structure"] if "structure" in row else None,
     )

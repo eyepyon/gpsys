@@ -64,6 +64,14 @@ from regional_revitalization.models import (
     GeoPoint,
     RegionalResource,
 )
+from regional_revitalization.places_search import (
+    InMemoryPlacesSearchResultRepository,
+    MockPlacesSearchClient,
+    PlacesSearchClient,
+    PlacesSearchResultRepository,
+    execute_places_search,
+    register_search_result,
+)
 from regional_revitalization.registration import register_resource
 from regional_revitalization.repository import (
     InMemoryResourceRepository,
@@ -73,6 +81,11 @@ from regional_revitalization.resource_management import (
     delete_resource,
     search_resources_in_bounds,
     update_resource,
+)
+from regional_revitalization.search_history import (
+    InMemorySearchRequestRepository,
+    SearchRequestRepository,
+    record_search_request,
 )
 from regional_revitalization.update_request import (
     InMemoryUpdateRequestRepository,
@@ -86,8 +99,14 @@ from regional_revitalization.storage import InMemoryStorageClient, StorageClient
 from regional_revitalization.vacant_property import (
     BusinessStatus,
     InMemoryVacantPropertyRepository,
+    PlacesApiError,
+    VacantPropertyCandidate,
     VacantPropertyRepository,
     search_vacant_properties,
+)
+from regional_revitalization.vacant_property_management import (
+    search_vacant_properties_in_bounds,
+    update_vacant_property_details,
 )
 
 logger = logging.getLogger(__name__)
@@ -141,6 +160,11 @@ _admin_stats_repository: AdminStatsRepository = InMemoryAdminStatsRepository(
     admin_user_repository=_admin_user_repository,
 )
 _update_request_repository: UpdateRequestRepository = InMemoryUpdateRequestRepository()
+_search_request_repository: SearchRequestRepository = InMemorySearchRequestRepository()
+_places_search_client: PlacesSearchClient = MockPlacesSearchClient()
+_places_search_result_repository: PlacesSearchResultRepository = (
+    InMemoryPlacesSearchResultRepository()
+)
 
 
 def get_resource_repository() -> ResourceRepository:
@@ -176,6 +200,21 @@ def get_admin_stats_repository() -> AdminStatsRepository:
 def get_update_request_repository() -> UpdateRequestRepository:
     """共有の`UpdateRequestRepository`インスタンスを返す（`Depends`用）。"""
     return _update_request_repository
+
+
+def get_search_request_repository() -> SearchRequestRepository:
+    """共有の`SearchRequestRepository`インスタンスを返す（`Depends`用）。"""
+    return _search_request_repository
+
+
+def get_places_search_client() -> PlacesSearchClient:
+    """共有の`PlacesSearchClient`インスタンスを返す（`Depends`用）。"""
+    return _places_search_client
+
+
+def get_places_search_result_repository() -> PlacesSearchResultRepository:
+    """共有の`PlacesSearchResultRepository`インスタンスを返す（`Depends`用）。"""
+    return _places_search_result_repository
 
 
 def set_resource_repository(repository: ResourceRepository) -> None:
@@ -228,6 +267,26 @@ def set_update_request_repository(repository: UpdateRequestRepository) -> None:
     _update_request_repository = repository
 
 
+def set_search_request_repository(repository: SearchRequestRepository) -> None:
+    """共有の`SearchRequestRepository`インスタンスを差し替える。"""
+    global _search_request_repository
+    _search_request_repository = repository
+
+
+def set_places_search_client(client: PlacesSearchClient) -> None:
+    """共有の`PlacesSearchClient`インスタンスを差し替える。"""
+    global _places_search_client
+    _places_search_client = client
+
+
+def set_places_search_result_repository(
+    repository: PlacesSearchResultRepository,
+) -> None:
+    """共有の`PlacesSearchResultRepository`インスタンスを差し替える。"""
+    global _places_search_result_repository
+    _places_search_result_repository = repository
+
+
 # --------------------------------------------------------------------------
 # 起動時ブートストラップ（実運用実装への差し替え）
 # --------------------------------------------------------------------------
@@ -267,11 +326,15 @@ async def _bootstrap_production_dependencies() -> None:
             from regional_revitalization.postgres_update_request_repository import (
                 PostgresUpdateRequestRepository,
             )
+            from regional_revitalization.postgres_search_history_repository import (
+                PostgresSearchRequestRepository,
+            )
 
             admin_user_repository = PostgresAdminUserRepository(pool)
             set_admin_user_repository(admin_user_repository)
             set_admin_stats_repository(PostgresAdminStatsRepository(pool))
             set_update_request_repository(PostgresUpdateRequestRepository(pool))
+            set_search_request_repository(PostgresSearchRequestRepository(pool))
             logger.info("Cloud SQL for PostgreSQLへの接続を初期化しました")
 
             await _bootstrap_initial_admin_user(admin_user_repository)
@@ -301,6 +364,22 @@ async def _bootstrap_production_dependencies() -> None:
             )
         except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
             logger.exception("推論サービスクライアントの初期化に失敗しました")
+            raise
+
+    # 管理画面の「この場所でGoogle Places APIを検索する」機能用のクライアント。
+    # 居抜き物件同期サービス（Cloud Run Jobs）とは別に、APIRunからも
+    # Places APIを呼び出すため、専用のSecret Manager経由の環境変数を用意する。
+    places_api_key = os.environ.get("ADMIN_PLACES_API_KEY")
+    if places_api_key:
+        try:
+            from regional_revitalization.real_places_search_client import (
+                RealPlacesSearchClient,
+            )
+
+            set_places_search_client(RealPlacesSearchClient(api_key=places_api_key))
+            logger.info("管理画面向けPlaces APIクライアントを初期化しました")
+        except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
+            logger.exception("Places APIクライアントの初期化に失敗しました")
             raise
 
 
