@@ -14,6 +14,14 @@
   <div id="error" class="admin-error" style="display:none;"></div>
 
   <div class="admin-card">
+    <h2 style="font-size:1.05rem; margin-top:0;">収集状況</h2>
+    <div class="admin-grid">
+      <div class="admin-stat-box"><div id="all-store-count" class="value">-</div><div class="label">収集済み全店舗</div></div>
+      <div class="admin-stat-box"><div id="vacant-store-count" class="value">-</div><div class="label">居抜き物件候補</div></div>
+    </div>
+  </div>
+
+  <div class="admin-card">
     <h2 style="font-size:1.05rem; margin-top:0;">市町村別データ数（居抜き物件候補）</h2>
     <table class="admin-table"><thead><tr><th>市町村</th><th>件数</th></tr></thead>
       <tbody id="muni-vacant-rows"></tbody></table>
@@ -89,9 +97,17 @@ function drawScatter(points) {
 async function load() {
   const errorEl = document.getElementById("error");
   try {
-    const res = await adminFetch("/admin/stats");
+    const [res, dashboardRes] = await Promise.all([
+      adminFetch("/admin/stats"),
+      adminFetch("/admin/dashboard"),
+    ]);
     if (!res.ok) throw new Error(`統計情報の取得に失敗しました (HTTP ${res.status})`);
     const data = await res.json();
+    if (dashboardRes.ok) {
+      const dashboard = await dashboardRes.json();
+      document.getElementById("all-store-count").textContent = dashboard.all_store_count;
+      document.getElementById("vacant-store-count").textContent = dashboard.vacant_property_count;
+    }
 
     fillTable("muni-vacant-rows", data.municipality_counts_vacant_properties, "municipality", "count");
     fillTable("type-rows", data.type_counts, "type_tag", "count");

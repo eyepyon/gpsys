@@ -54,6 +54,7 @@ class DashboardSummary:
     consultation_log_count: int
     pending_update_request_count: int
     admin_user_count: int
+    all_store_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -192,12 +193,23 @@ class PostgresAdminStatsRepository:
             "resource_update_requests", "status = 'pending'"
         )
         admin_count = await self._count_rows("admin_users")
+        places_table = await self._pool.fetchval(
+            "SELECT to_regclass('places_search_results')"
+        )
+        all_store_count = (
+            int(await self._pool.fetchval(
+                "SELECT COUNT(DISTINCT place_id) FROM places_search_results"
+            ))
+            if places_table is not None
+            else 0
+        )
         return DashboardSummary(
             regional_resource_count=int(resource_count),
             vacant_property_count=int(vacant_count),
             consultation_log_count=int(consultation_count),
             pending_update_request_count=int(pending_count),
             admin_user_count=int(admin_count),
+            all_store_count=all_store_count,
         )
 
     async def _count_rows(self, table_name: str, where: str | None = None) -> int:

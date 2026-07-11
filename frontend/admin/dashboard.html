@@ -18,6 +18,7 @@
   <div class="admin-card">
     <div class="admin-grid" id="summary-grid">
       <div class="admin-stat-box"><div class="value">-</div><div class="label">居抜き物件候補</div></div>
+      <div class="admin-stat-box"><div class="value">-</div><div class="label">収集済み全店舗</div></div>
       <div class="admin-stat-box"><div class="value">-</div><div class="label">未対応の更新依頼</div></div>
       <div class="admin-stat-box"><div class="value">-</div><div class="label">管理ユーザー</div></div>
     </div>
@@ -46,8 +47,9 @@ async function load() {
     const data = await res.json();
     const boxes = document.querySelectorAll("#summary-grid .admin-stat-box .value");
     boxes[0].textContent = data.vacant_property_count;
-    boxes[1].textContent = data.pending_update_request_count;
-    boxes[2].textContent = data.admin_user_count;
+    boxes[1].textContent = data.all_store_count;
+    boxes[2].textContent = data.pending_update_request_count;
+    boxes[3].textContent = data.admin_user_count;
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.style.display = "block";

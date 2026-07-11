@@ -800,6 +800,7 @@ class DashboardSummaryBody(BaseModel):
     consultation_log_count: int
     pending_update_request_count: int
     admin_user_count: int
+    all_store_count: int
 
 
 class MunicipalityCountBody(BaseModel):
@@ -1015,6 +1016,7 @@ async def admin_dashboard(
         consultation_log_count=summary.consultation_log_count,
         pending_update_request_count=summary.pending_update_request_count,
         admin_user_count=summary.admin_user_count,
+        all_store_count=summary.all_store_count,
     )
 
 
