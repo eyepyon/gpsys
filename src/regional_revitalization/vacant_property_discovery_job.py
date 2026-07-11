@@ -52,7 +52,7 @@ async def run() -> None:
         client = RealPlacesSearchClient(get_places_api_key())
         found: dict[str, tuple[object, object]] = {}
         for request_id, point in seeds:
-            for place in client.search_text(point, RADIUS_KM, "閉店 店舗"):
+            for place in client.search_text(point, RADIUS_KM, "閉業"):
                 if place.business_status != BusinessStatus.CLOSED_PERMANENTLY:
                     continue
                 if any(distance_km(place.location, saved.location) < MIN_RESULT_DISTANCE_KM for _, saved in found.values()):

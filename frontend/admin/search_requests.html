@@ -147,6 +147,7 @@ async function executePlacesSearch(data) {
         latitude: parseFloat(data.lat),
         longitude: parseFloat(data.lng),
         radius_km: parseFloat(data.radius),
+        keyword: "閉業",
       }),
     });
     if (!res.ok) {
