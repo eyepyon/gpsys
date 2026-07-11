@@ -44,9 +44,14 @@ variable "cpu" {
 }
 
 variable "memory" {
-  description = "コンテナに割り当てるメモリ量"
+  description = <<-EOT
+    コンテナに割り当てるメモリ量。GCPの制約上、CPU always allocated
+    （本モジュールのデフォルト設定、cpu_idle未指定=false相当）の場合は
+    512Mi未満を指定できない（"Total memory < 512 Mi is not supported with
+    cpu always allocated"エラーになる）ため、512Mi以上を指定すること。
+  EOT
   type        = string
-  default     = "256Mi"
+  default     = "512Mi"
 }
 
 variable "labels" {
