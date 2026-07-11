@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -293,7 +294,7 @@ def set_places_search_result_repository(
 # --------------------------------------------------------------------------
 # 起動時ブートストラップ（実運用実装への差し替え）
 # --------------------------------------------------------------------------
-# Cloud Run実行時は、環境変数`DATABASE_URL`・`GCS_BUCKET_NAME`が
+# Cloud Run実行時は、環境変数`DB_CONNECTION_JSON`・`GCS_BUCKET_NAME`が
 # Terraform（Secret Manager経由）で設定されるため、それらが存在する場合のみ
 # インメモリ実装からCloud SQL/Cloud Storage実装へ差し替える。
 # 環境変数が未設定のローカル開発・単体テストではデフォルトのインメモリ実装の
@@ -303,8 +304,9 @@ def set_places_search_result_repository(
 
 async def _bootstrap_production_dependencies() -> None:
     """環境変数に応じて、共有インスタンスを実運用実装へ差し替える。"""
+    db_connection_json = os.environ.get("DB_CONNECTION_JSON")
     database_url = os.environ.get("DATABASE_URL")
-    if database_url:
+    if db_connection_json or database_url:
         try:
             import asyncpg
 
@@ -321,7 +323,11 @@ async def _bootstrap_production_dependencies() -> None:
                 PostgresVacantPropertyRepository,
             )
 
-            pool = await asyncpg.create_pool(database_url)
+            if db_connection_json:
+                db_connection = json.loads(db_connection_json)
+                pool = await asyncpg.create_pool(**db_connection)
+            else:
+                pool = await asyncpg.create_pool(database_url)
             set_resource_repository(PostgresResourceRepository(pool))
             set_vacant_property_repository(
                 PostgresVacantPropertyRepository(pool)
@@ -356,7 +362,9 @@ async def _bootstrap_production_dependencies() -> None:
             logger.exception("Cloud Storageクライアントの初期化に失敗しました")
             raise
 
-    inference_url = os.environ.get("INFERENCE_SERVICE_URL")
+    inference_url = os.environ.get("INFER_RUN_URL") or os.environ.get(
+        "INFERENCE_SERVICE_URL"
+    )
     if inference_url:
         try:
             from regional_revitalization.inference import HttpInferenceClient
