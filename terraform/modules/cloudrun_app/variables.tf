@@ -85,6 +85,16 @@ variable "allow_unauthenticated" {
   default     = false
 }
 
+variable "cors_allowed_origins" {
+  description = <<-EOT
+    ブラウザから直接APIRunを呼び出すことを許可するオリジンのカンマ区切り一覧
+    （例: "https://storage.googleapis.com"）。動作確認用フロント画面等で
+    使用する。空文字列（デフォルト）の場合はCORSミドルウェアを有効化しない。
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "labels" {
   description = "リソースに付与する共通ラベル"
   type        = map(string)

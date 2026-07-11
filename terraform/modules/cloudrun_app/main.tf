@@ -73,6 +73,16 @@ resource "google_cloud_run_v2_service" "app" {
         value = var.inference_service_url
       }
 
+      # 動作確認用フロント画面等、ブラウザから直接呼び出すオリジンを
+      # 許可する場合にのみ設定する（未設定時はCORS無効のまま）。
+      dynamic "env" {
+        for_each = var.cors_allowed_origins != "" ? [var.cors_allowed_origins] : []
+        content {
+          name  = "CORS_ALLOWED_ORIGINS"
+          value = env.value
+        }
+      }
+
       # DB接続情報はSecret Manager経由でJSON文字列として環境変数にマウントする
       # （平文の接続情報をコンテナイメージやTerraformコードに直接埋め込まない）
       env {

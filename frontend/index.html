@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>地方創生支援システム 動作確認用画面</title>
+<style>
+  body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.1rem; margin-top: 2.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.9rem; }
+  input, textarea, select { width: 100%; box-sizing: border-box; padding: 0.4rem; margin-top: 0.2rem; font-size: 0.95rem; }
+  button { margin-top: 1rem; padding: 0.5rem 1.2rem; font-size: 0.95rem; cursor: pointer; }
+  pre { background: #f4f4f4; padding: 0.8rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-size: 0.85rem; }
+  .row { display: flex; gap: 1rem; }
+  .row > div { flex: 1; }
+  .note { font-size: 0.85rem; color: #555; background: #fff8e1; padding: 0.6rem; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>地方創生支援システム 動作確認用画面</h1>
+
+<p class="note">
+  これは動作確認専用の最小限のページです。認証は行っていないため、
+  APIRunの未認証アクセス（<code>allow_unauthenticated=true</code>）を
+  一時的に有効化した環境でのみ動作します。確認後は
+  <code>allow_unauthenticated=false</code>に戻すことを推奨します。
+</p>
+
+<label>APIRunのベースURL（例: https://regional-revitalization-api-dev-xxxxx.a.run.app）</label>
+<input id="baseUrl" type="text" placeholder="https://..." />
+
+<h2>1. 相談応答（POST /consultations）</h2>
+<label>質問文</label>
+<textarea id="c_query" rows="2" placeholder="この地域のイベント情報を教えてください"></textarea>
+<div class="row">
+  <div>
+    <label>緯度</label>
+    <input id="c_lat" type="number" step="0.0001" value="35.68" />
+  </div>
+  <div>
+    <label>経度</label>
+    <input id="c_lng" type="number" step="0.0001" value="139.76" />
+  </div>
+  <div>
+    <label>検索半径(km)</label>
+    <input id="c_radius" type="number" step="0.1" value="5" />
+  </div>
+</div>
+<button onclick="callConsultation()">送信</button>
+<pre id="c_result"></pre>
+
+<h2>2. 地域資源の登録（POST /resources）</h2>
+<label>名称</label>
+<input id="r_name" type="text" placeholder="〇〇まつり" />
+<label>カテゴリ</label>
+<input id="r_category" type="text" placeholder="イベント" />
+<label>説明文</label>
+<textarea id="r_description" rows="2" placeholder="地域の秋祭りです"></textarea>
+<div class="row">
+  <div>
+    <label>緯度</label>
+    <input id="r_lat" type="number" step="0.0001" value="35.68" />
+  </div>
+  <div>
+    <label>経度</label>
+    <input id="r_lng" type="number" step="0.0001" value="139.76" />
+  </div>
+</div>
+<button onclick="callRegisterResource()">登録</button>
+<pre id="r_result"></pre>
+
+<h2>3. 居抜き物件の検索（POST /vacant-properties/search）</h2>
+<div class="row">
+  <div>
+    <label>緯度</label>
+    <input id="v_lat" type="number" step="0.0001" value="35.68" />
+  </div>
+  <div>
+    <label>経度</label>
+    <input id="v_lng" type="number" step="0.0001" value="139.76" />
+  </div>
+  <div>
+    <label>検索半径(km)</label>
+    <input id="v_radius" type="number" step="0.1" value="5" />
+  </div>
+</div>
+<label>営業状態</label>
+<select id="v_status">
+  <option value="CLOSED_PERMANENTLY" selected>CLOSED_PERMANENTLY（完全閉店・廃業）</option>
+  <option value="CLOSED_TEMPORARILY">CLOSED_TEMPORARILY（一時休業）</option>
+  <option value="OPERATIONAL">OPERATIONAL（営業中）</option>
+</select>
+<label>業種タグ（カンマ区切り、任意）</label>
+<input id="v_types" type="text" placeholder="restaurant,cafe" />
+<button onclick="callVacantSearch()">検索</button>
+<pre id="v_result"></pre>
+
+<script>
+function getBaseUrl() {
+  const v = document.getElementById('baseUrl').value.trim();
+  if (!v) { alert('APIRunのベースURLを入力してください'); throw new Error('base url required'); }
+  return v.replace(/\/$/, '');
+}
+
+async function postJson(path, body, outputId) {
+  const out = document.getElementById(outputId);
+  out.textContent = '送信中...';
+  try {
+    const res = await fetch(getBaseUrl() + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let pretty;
+    try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch (e) { pretty = text; }
+    out.textContent = `HTTP ${res.status}\n${pretty}`;
+  } catch (e) {
+    out.textContent = 'エラー: ' + e.message;
+  }
+}
+
+function callConsultation() {
+  postJson('/consultations', {
+    query_text: document.getElementById('c_query').value,
+    latitude: parseFloat(document.getElementById('c_lat').value),
+    longitude: parseFloat(document.getElementById('c_lng').value),
+    radius_km: parseFloat(document.getElementById('c_radius').value),
+  }, 'c_result');
+}
+
+function callRegisterResource() {
+  postJson('/resources', {
+    name: document.getElementById('r_name').value,
+    category: document.getElementById('r_category').value,
+    description: document.getElementById('r_description').value,
+    latitude: parseFloat(document.getElementById('r_lat').value),
+    longitude: parseFloat(document.getElementById('r_lng').value),
+  }, 'r_result');
+}
+
+function callVacantSearch() {
+  const typesRaw = document.getElementById('v_types').value.trim();
+  const types = typesRaw ? typesRaw.split(',').map(s => s.trim()).filter(Boolean) : null;
+  postJson('/vacant-properties/search', {
+    latitude: parseFloat(document.getElementById('v_lat').value),
+    longitude: parseFloat(document.getElementById('v_lng').value),
+    radius_km: parseFloat(document.getElementById('v_radius').value),
+    business_status: document.getElementById('v_status').value,
+    types: types,
+  }, 'v_result');
+}
+</script>
+
+</body>
+</html>

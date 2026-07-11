@@ -34,12 +34,13 @@ regional-revitalization-support-system/
 ├── migrations/                     # Cloud SQL用マイグレーションスクリプト（DDL）
 ├── terraform/                      # GCPリソースのTerraformコード
 ├── docker/                         # 各サービスのDockerfile（api/infer/vacant_sync）
+├── frontend/                       # 動作確認用の静的HTMLページ（本格的な業務用UIではない）
 ├── .github/workflows/              # GitHub ActionsのCI/CDワークフロー（ci.yml, deploy.yml）
 ├── docs/                           # 本ドキュメント群
 └── .kiro/specs/.../                # 要件定義書・設計書・実装タスクリスト
 ```
 
-各モジュールの役割は[architecture.md](./architecture.md)の「ソースコード構成」を参照してください。
+各モジュールの役割は[architecture.md](./architecture.md)の「ソースコード構成」を参照してください。`frontend/`の使い方は[frontend/README.md](../frontend/README.md)を参照してください。
 
 ## テストの実行方法
 

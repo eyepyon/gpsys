@@ -147,3 +147,23 @@ variable "github_repository" {
   type        = string
   default     = ""
 }
+
+variable "app_allow_unauthenticated" {
+  description = <<-EOT
+    真の場合、APIRun（アプリ本体サービス）への未認証（allUsers）アクセスを
+    許可する。動作確認用フロント画面からのアクセスや、パブリックAPIとして
+    運用する場合にtrueにする。デフォルトはfalse（IAM認証必須、安全側）。
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "app_cors_allowed_origins" {
+  description = <<-EOT
+    ブラウザから直接APIRunを呼び出すことを許可するオリジンのカンマ区切り
+    一覧（例: "https://storage.googleapis.com"）。動作確認用フロント画面等で
+    使用する。空文字列（デフォルト）の場合はCORSを有効化しない。
+  EOT
+  type        = string
+  default     = ""
+}

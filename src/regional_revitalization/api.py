@@ -41,6 +41,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from regional_revitalization.consultation import generate_consultation_response
@@ -72,6 +73,23 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="地方創生支援システム アプリ本体サービス (APIRun)", lifespan=_lifespan
 )
+
+# --------------------------------------------------------------------------
+# CORS設定（動作確認用フロント画面からのアクセスを許可する）
+# --------------------------------------------------------------------------
+# 環境変数`CORS_ALLOWED_ORIGINS`にカンマ区切りのオリジン一覧を指定した場合のみ
+# CORSを許可する（未設定時は既定でCORS無効。ブラウザから直接呼び出す
+# 確認用フロント画面等、必要な場合にのみ明示的に有効化する運用とする）。
+_cors_allowed_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+if _cors_allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            origin.strip() for origin in _cors_allowed_origins.split(",") if origin.strip()
+        ],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
 
 
 # --------------------------------------------------------------------------

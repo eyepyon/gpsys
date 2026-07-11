@@ -168,6 +168,8 @@ module "cloudrun_app" {
   db_connection_secret_id = module.cloudsql.db_connection_secret_id
   inference_service_url   = module.cloudrun_inference.service_url
   storage_bucket_name     = module.storage.bucket_name
+  allow_unauthenticated   = var.app_allow_unauthenticated
+  cors_allowed_origins    = var.app_cors_allowed_origins
   labels                  = var.labels
 }
 
