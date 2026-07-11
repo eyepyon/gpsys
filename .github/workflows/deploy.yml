@@ -83,13 +83,25 @@ jobs:
         run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
       - name: GCPへの認証（Workload Identity Federation）
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+          # token_format=access_tokenにより、このステップで一度だけサービス
+          # アカウントへのなりすまし（impersonation）を行いアクセストークンを
+          # 取得する。`gcloud auth configure-docker`の認証情報ヘルパー経由では
+          # docker push時に都度なりすましが再実行され、IAMバインディングの
+          # 反映タイミングによって`iam.serviceAccounts.getAccessToken`が
+          # 一時的に拒否される場合があるため、それを避ける。
+          token_format: "access_token"
 
       - name: Artifact Registryへのdocker認証設定
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Docker Buildxのセットアップ
         uses: docker/setup-buildx-action@v3
