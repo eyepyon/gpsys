@@ -5,7 +5,11 @@
 さらに、Google Maps Platform Places APIを用いて閉店・廃業したスポットを検知し
 「居抜き物件」として蓄積・検索できる機能を提供します。
 
-詳細な要件・設計は以下を参照してください。
+人間向けの詳細ドキュメント（アーキテクチャ、APIリファレンス、データベーススキーマ、居抜き物件機能の解説、開発ガイド、デプロイガイド）は `docs/` を参照してください。
+
+- ドキュメント目次: [`docs/README.md`](./docs/README.md)
+
+要件・設計の背景を確認したい場合は以下を参照してください。
 
 - 要件定義書: `.kiro/specs/regional-revitalization-support-system/requirements.md`
 - 設計書: `.kiro/specs/regional-revitalization-support-system/design.md`
