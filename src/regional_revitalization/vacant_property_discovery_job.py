@@ -15,8 +15,7 @@ from regional_revitalization.vacant_property_sync_job import get_places_api_key,
 
 RADIUS_KM = 10.0
 MAX_RESULTS = 400
-MIN_SEED_DISTANCE_KM = 2.0
-MIN_RESULT_DISTANCE_KM = 0.05
+MIN_SEED_DISTANCE_KM = 0.3
 
 
 def distance_km(a: GeoPoint, b: GeoPoint) -> float:
