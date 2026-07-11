@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import inspect
 import json
 import logging
 import os
@@ -1127,6 +1128,8 @@ async def admin_list_resources(
             max_longitude,
             limit,
         )
+        if inspect.isawaitable(resources):
+            resources = await resources
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1654,6 +1657,8 @@ async def admin_list_vacant_properties(
             max_longitude,
             limit,
         )
+        if inspect.isawaitable(candidates):
+            candidates = await candidates
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
