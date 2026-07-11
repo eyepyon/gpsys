@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お問い合わせ - いぬきんじょ</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#2563eb',
+secondary: '#f97316'
+},
+borderRadius: {
+'none': '0px',
+'sm': '4px',
+DEFAULT: '8px',
+'md': '12px',
+'lg': '16px',
+'xl': '20px',
+'2xl': '24px',
+'3xl': '32px',
+'full': '9999px',
+'button': '8px'
+}
+}
+}
+}
+</script>
+<style>
+:where([class^="ri-"])::before {
+content: "\f3c2";
+}
+.!rounded-button {
+border-radius: 8px !important;
+}
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
+input:focus, textarea:focus, select:focus {
+outline: none;
+border-color: #2563eb;
+}
+select {
+appearance: none;
+background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+background-repeat: no-repeat;
+background-position: right 1rem center;
+background-size: 1.25rem;
+}
+</style>
+</head>
+<body class="bg-white">
+
+<header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
+<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+<div class="flex items-center">
+<span class="font-['Pacifico'] text-2xl text-primary">logo</span>
+</div>
+<nav class="flex items-center gap-8">
+<a href="index.html" class="text-gray-700 hover:text-primary transition-colors text-sm">ホーム</a>
+<a href="faq.html" class="text-gray-700 hover:text-primary transition-colors text-sm">よくある質問</a>
+<button class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
+</nav>
+</div>
+</header>
+
+<section class="pt-32 pb-16 bg-gray-50">
+<div class="max-w-7xl mx-auto px-6 text-center">
+<div class="w-20 h-20 flex items-center justify-center bg-primary/10 rounded-full mx-auto mb-6">
+<i class="ri-customer-service-line text-4xl text-primary"></i>
+</div>
+<h1 class="text-5xl font-bold text-gray-900 mb-4">お問い合わせ</h1>
+<p class="text-xl text-gray-600">ご質問やご相談がございましたら、お気軽にお問い合わせください</p>
+</div>
+</section>
+
+<section class="py-16 bg-white">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-3 gap-8 mb-16">
+<div class="bg-blue-50 rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
+<div class="w-16 h-16 flex items-center justify-center bg-white rounded-full mx-auto mb-6">
+<i class="ri-time-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-4">営業時間</h3>
+<p class="text-gray-700 mb-2">平日 9:00 - 18:00</p>
+<p class="text-gray-600 text-sm">土日祝日休業</p>
+</div>
+<div class="bg-green-50 rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
+<div class="w-16 h-16 flex items-center justify-center bg-white rounded-full mx-auto mb-6">
+<i class="ri-reply-line text-3xl text-green-600"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-4">返信までの目安</h3>
+<p class="text-gray-700 mb-2">通常 1〜2 営業日以内に</p>
+<p class="text-gray-600 text-sm">ご返信いたします</p>
+</div>
+<div class="bg-yellow-50 rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
+<div class="w-16 h-16 flex items-center justify-center bg-white rounded-full mx-auto mb-6">
+<i class="ri-questionnaire-line text-3xl text-yellow-600"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-4">よくある質問</h3>
+<p class="text-gray-700 mb-4">お問い合わせ前に<br>FAQ をご確認ください</p>
+<a href="faq.html" class="inline-flex items-center gap-2 text-yellow-700 hover:text-yellow-800 font-medium text-sm transition-colors">
+<span>FAQ を見る</span>
+<div class="w-4 h-4 flex items-center justify-center">
+<i class="ri-arrow-right-line text-base"></i>
+</div>
+</a>
+</div>
+</div>
+
+<div class="max-w-4xl mx-auto">
+<div class="bg-white rounded-2xl shadow-xl p-10">
+<h2 class="text-3xl font-bold text-gray-900 mb-8">お問い合わせフォーム</h2>
+<form>
+<div class="space-y-6">
+<div>
+<label class="block text-sm font-bold text-gray-900 mb-2">お名前 <span class="text-secondary">*</span></label>
+<div class="relative">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-user-line text-lg"></i>
+</div>
+<input type="text" required placeholder="山田 太郎" class="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm">
+</div>
+</div>
+
+<div>
+<label class="block text-sm font-bold text-gray-900 mb-2">メールアドレス <span class="text-secondary">*</span></label>
+<div class="relative">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-mail-line text-lg"></i>
+</div>
+<input type="email" required placeholder="example@email.com" class="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm">
+</div>
+</div>
+
+<div>
+<label class="block text-sm font-bold text-gray-900 mb-2">電話番号 <span class="text-gray-500 text-xs font-normal">(任意)</span></label>
+<div class="relative">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-phone-line text-lg"></i>
+</div>
+<input type="tel" placeholder="090-1234-5678" class="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm">
+</div>
+</div>
+
+<div>
+<label class="block text-sm font-bold text-gray-900 mb-2">お問い合わせ種別 <span class="text-secondary">*</span></label>
+<div class="relative">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-question-line text-lg"></i>
+</div>
+<select required class="w-full pl-12 pr-12 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm">
+<option value="">選択してください</option>
+<option value="property">物件について</option>
+<option value="service">サービスについて</option>
+<option value="registration">会員登録について</option>
+<option value="technical">技術的な問題</option>
+<option value="other">その他</option>
+</select>
+</div>
+</div>
+
+<div>
+<label class="block text-sm font-bold text-gray-900 mb-2">お問い合わせ内容 <span class="text-secondary">*</span></label>
+<textarea required placeholder="お問い合わせ内容を詳しくご記入ください" rows="8" class="w-full px-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm resize-none"></textarea>
+</div>
+
+<button type="submit" class="w-full py-4 bg-secondary text-white font-bold !rounded-button hover:bg-orange-600 transition-colors text-lg whitespace-nowrap">
+<span class="flex items-center justify-center gap-2">
+<span>送信する</span>
+<div class="w-5 h-5 flex items-center justify-center">
+<i class="ri-send-plane-line text-xl"></i>
+</div>
+</span>
+</button>
+
+<p class="text-xs text-gray-500 text-center mt-4">
+送信いただいた情報は、<a href="privacy.html" class="text-primary hover:underline">プライバシーポリシー</a>に基づき適切に管理いたします
+</p>
+</div>
+</form>
+</div>
+</div>
+</div>
+</section>
+
+<section class="py-16 bg-gradient-to-r from-primary to-blue-600">
+<div class="max-w-5xl mx-auto px-6 text-center">
+<div class="w-20 h-20 flex items-center justify-center bg-white rounded-full mx-auto mb-6">
+<i class="ri-phone-line text-4xl text-primary"></i>
+</div>
+<h2 class="text-4xl font-bold text-white mb-4">お急ぎの方はお電話でも受け付けております</h2>
+<p class="text-xl text-white opacity-95 mb-8">平日 9:00 - 18:00</p>
+<a href="tel:0120123456" class="inline-flex items-center gap-3 px-10 py-4 bg-white text-primary font-bold !rounded-button hover:bg-gray-50 transition-colors text-2xl shadow-xl whitespace-nowrap">
+<div class="w-7 h-7 flex items-center justify-center">
+<i class="ri-phone-fill text-2xl"></i>
+</div>
+<span>0120-123-456</span>
+</a>
+</div>
+</section>
+
+<footer class="bg-gray-900 text-gray-300 py-16">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-4 gap-12 mb-12">
+<div>
+<a href="index.html"><div class="font-['Pacifico'] text-2xl text-white mb-4">logo</div></a>
+<p class="text-sm leading-relaxed">居抜き物件候補検索サービス「いぬきんじょ」は、あなたの出店を全力でサポートします。</p>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">サービス</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="index.html" class="hover:text-white transition-colors">物件検索</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">サポート</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="faq.html" class="hover:text-white transition-colors">よくある質問</a></li>
+<li><a href="contact.html" class="text-white font-medium">お問い合わせ</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">法的情報</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="terms.html" class="hover:text-white transition-colors">利用規約</a></li>
+<li><a href="privacy.html" class="hover:text-white transition-colors">プライバシーポリシー</a></li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-800 pt-8">
+<div class="flex items-center justify-between">
+<p class="text-sm">&copy; 2026 いぬきんじょ. All rights reserved.</p>
+<div class="flex items-center gap-4">
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-twitter-x-line text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-facebook-fill text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-instagram-line text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-line-fill text-lg"></i>
+</a>
+</div>
+</div>
+</div>
+</div>
+</footer>
+
+<script id="form-validation">
+document.addEventListener('DOMContentLoaded', function() {
+const form = document.querySelector('form');
+form.addEventListener('submit', function(e) {
+e.preventDefault();
+const formData = new FormData(form);
+alert('お問い合わせを受け付けました。ご入力いただいたメールアドレス宛に確認メールをお送りいたします。');
+form.reset();
+});
+});
+</script>
+
+</body>
+</html>

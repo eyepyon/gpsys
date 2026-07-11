@@ -36,6 +36,7 @@ terraform/
     ├── storage/                               # 非公開Cloud Storageバケット
     ├── cloudrun_app/                          # アプリ本体サービス(APIRun)
     ├── cloudrun_inference/                    # 推論サービス(InferRun, GPU L4)
+    ├── cloudrun_frontend/                     # 動作確認用フロント画面(inuki、未認証で誰でもアクセス可能)
     ├── cloudrun_jobs_vacant_property_sync/    # 居抜き物件同期サービス(Cloud Run Jobs) + Secret Manager(Places APIキー)
     └── scheduler/                             # Cloud Scheduler(定期トリガー)
 ```
@@ -72,6 +73,8 @@ terraform/
 | `app_image` | ○ | - | APIRunのコンテナイメージURL |
 | `inference_service_name` | - | `regional-revitalization-infer` | InferRunのCloud Runサービス名 |
 | `inference_image` | ○ | - | InferRunのコンテナイメージURL |
+| `frontend_service_name` | - | `inuki` | 動作確認用フロント画面(inuki)のCloud Runサービス名 |
+| `frontend_image` | ○ | - | inukiのコンテナイメージURL(nginxで`frontend/index.html`を配信) |
 | `vacant_sync_job_name` | - | `vacant-property-sync` | 居抜き物件同期サービスのCloud Run Jobs名 |
 | `vacant_sync_image` | ○ | - | 居抜き物件同期サービスのコンテナイメージURL |
 | `vpc_network_name` | - | `default` | VPCコネクタを紐づける対象VPCネットワーク名 |
@@ -141,6 +144,13 @@ design.mdの方針（GPU L4はus-central1でホスト）に合わせ、デフォ
 - `modules/cloudrun_app`: APIRun（アプリ本体サービス）のCloud Runサービス
 - `modules/cloudrun_inference`: InferRun（推論サービス、GPU L4、内部限定公開）の
   Cloud Runサービス
+- `modules/cloudrun_frontend`: inuki（動作確認用フロント画面、`frontend/index.html`を
+  nginxで配信）のCloud Runサービス。APIRun/InferRunとは異なり、`allUsers`に
+  `roles/run.invoker`を付与し常時未認証公開する。組織側の組織ポリシー制約
+  （`constraints/iam.allowedPolicyMemberDomains`）がドメイン限定のままだと
+  IAMバインディング作成が`FAILED_PRECONDITION`で失敗するため、対象プロジェクトに
+  限定して制約をALLOW_ALLへ上書きしておく必要がある
+  （`gcloud resource-manager org-policies set-policy`）
 - `modules/cloudrun_jobs_vacant_property_sync`: 居抜き物件同期サービスの
   Cloud Run Jobs、Places APIキーのSecret Manager登録・アクセス制御
 - `modules/scheduler`: Cloud Schedulerによる定期トリガー（居抜き物件同期サービス起動）

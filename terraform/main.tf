@@ -173,6 +173,26 @@ module "cloudrun_app" {
   labels                  = var.labels
 }
 
+# --- cloudrun_frontend: 動作確認用フロント画面 (inuki) ---
+#
+# APIRun/InferRunとは別サービスとして、どこからでも未認証でアクセスできる
+# 静的サイト配信用Cloud Runを用意する。allUsersへのIAM権限付与を可能にする
+# ため、事前にプロジェクト側の組織ポリシー制約
+# （constraints/iam.allowedPolicyMemberDomains）をALLOW_ALLに設定しておく
+# 必要がある（詳細はterraform/README.md参照）。
+module "cloudrun_frontend" {
+  source = "./modules/cloudrun_frontend"
+
+  project_id         = var.project_id
+  region             = var.region
+  service_name       = var.frontend_service_name
+  service_account_id = "inuki-sa-${var.environment}"
+  image              = var.frontend_image
+  labels             = var.labels
+
+  depends_on = [google_project_service.apis]
+}
+
 # --- cloudrun_jobs_vacant_property_sync: 居抜き物件同期サービス ---
 module "vacant_property_sync" {
   source = "./modules/cloudrun_jobs_vacant_property_sync"

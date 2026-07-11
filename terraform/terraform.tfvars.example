@@ -24,6 +24,9 @@ app_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revi
 inference_service_name = "regional-revitalization-infer"
 inference_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/infer:latest"
 
+frontend_service_name = "inuki"
+frontend_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/frontend:latest"
+
 vacant_sync_job_name = "vacant-property-sync"
 vacant_sync_image    = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/vacant-sync:latest"
 

@@ -1,156 +1,340 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
-<title>地方創生支援システム 動作確認用画面</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>いぬきんじょ - 居抜き物件候補検索サービス</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#2563eb',
+secondary: '#f97316'
+},
+borderRadius: {
+'none': '0px',
+'sm': '4px',
+DEFAULT: '8px',
+'md': '12px',
+'lg': '16px',
+'xl': '20px',
+'2xl': '24px',
+'3xl': '32px',
+'full': '9999px',
+'button': '8px'
+}
+}
+}
+}
+</script>
 <style>
-  body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #222; }
-  h1 { font-size: 1.4rem; }
-  h2 { font-size: 1.1rem; margin-top: 2.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
-  label { display: block; margin-top: 0.6rem; font-size: 0.9rem; }
-  input, textarea, select { width: 100%; box-sizing: border-box; padding: 0.4rem; margin-top: 0.2rem; font-size: 0.95rem; }
-  button { margin-top: 1rem; padding: 0.5rem 1.2rem; font-size: 0.95rem; cursor: pointer; }
-  pre { background: #f4f4f4; padding: 0.8rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-size: 0.85rem; }
-  .row { display: flex; gap: 1rem; }
-  .row > div { flex: 1; }
-  .note { font-size: 0.85rem; color: #555; background: #fff8e1; padding: 0.6rem; border-radius: 4px; }
+:where([class^="ri-"])::before {
+content: "\f3c2";
+}
+.!rounded-button {
+border-radius: 8px !important;
+}
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
 </style>
 </head>
-<body>
+<body class="bg-white">
 
-<h1>地方創生支援システム 動作確認用画面</h1>
-
-<p class="note">
-  これは動作確認専用の最小限のページです。認証は行っていないため、
-  APIRunの未認証アクセス（<code>allow_unauthenticated=true</code>）を
-  一時的に有効化した環境でのみ動作します。確認後は
-  <code>allow_unauthenticated=false</code>に戻すことを推奨します。
-</p>
-
-<label>APIRunのベースURL（例: https://regional-revitalization-api-dev-xxxxx.a.run.app）</label>
-<input id="baseUrl" type="text" placeholder="https://..." />
-
-<h2>1. 相談応答（POST /consultations）</h2>
-<label>質問文</label>
-<textarea id="c_query" rows="2" placeholder="この地域のイベント情報を教えてください"></textarea>
-<div class="row">
-  <div>
-    <label>緯度</label>
-    <input id="c_lat" type="number" step="0.0001" value="35.68" />
-  </div>
-  <div>
-    <label>経度</label>
-    <input id="c_lng" type="number" step="0.0001" value="139.76" />
-  </div>
-  <div>
-    <label>検索半径(km)</label>
-    <input id="c_radius" type="number" step="0.1" value="5" />
-  </div>
+<header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
+<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+<div class="flex items-center">
+<a href="index.html" class="font-['Pacifico'] text-2xl text-primary">logo</a>
 </div>
-<button onclick="callConsultation()">送信</button>
-<pre id="c_result"></pre>
-
-<h2>2. 地域資源の登録（POST /resources）</h2>
-<label>名称</label>
-<input id="r_name" type="text" placeholder="〇〇まつり" />
-<label>カテゴリ</label>
-<input id="r_category" type="text" placeholder="イベント" />
-<label>説明文</label>
-<textarea id="r_description" rows="2" placeholder="地域の秋祭りです"></textarea>
-<div class="row">
-  <div>
-    <label>緯度</label>
-    <input id="r_lat" type="number" step="0.0001" value="35.68" />
-  </div>
-  <div>
-    <label>経度</label>
-    <input id="r_lng" type="number" step="0.0001" value="139.76" />
-  </div>
+<nav class="flex items-center gap-8">
+<a href="#service" class="text-gray-700 hover:text-primary transition-colors text-sm">サービスについて</a>
+<a href="#howto" class="text-gray-700 hover:text-primary transition-colors text-sm">使い方</a>
+<a href="faq.html" class="text-gray-700 hover:text-primary transition-colors text-sm">よくある質問</a>
+<a href="contact.html" class="text-gray-700 hover:text-primary transition-colors text-sm">お問い合わせ</a>
+<a href="demo.html" class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">動作確認デモを試す</a>
+</nav>
 </div>
-<button onclick="callRegisterResource()">登録</button>
-<pre id="r_result"></pre>
+</header>
 
-<h2>3. 居抜き物件の検索（POST /vacant-properties/search）</h2>
-<div class="row">
-  <div>
-    <label>緯度</label>
-    <input id="v_lat" type="number" step="0.0001" value="35.68" />
-  </div>
-  <div>
-    <label>経度</label>
-    <input id="v_lng" type="number" step="0.0001" value="139.76" />
-  </div>
-  <div>
-    <label>検索半径(km)</label>
-    <input id="v_radius" type="number" step="0.1" value="5" />
-  </div>
+<section class="relative min-h-screen flex items-center justify-center pt-20" style="background: linear-gradient(to right, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 40%, rgba(255, 255, 255, 0.7) 70%, rgba(255, 255, 255, 0) 100%), url('./img/9c3691dc3307b914262abcc0bac10dde.jpg') right center/cover no-repeat;">
+<div class="max-w-7xl mx-auto px-6 py-32 w-full">
+<div class="max-w-2xl">
+<h1 class="text-5xl font-bold mb-6 text-gray-900 leading-tight">居抜き物件候補検索サービス<br>「いぬきんじょ」</h1>
+<p class="text-xl mb-8 text-gray-700 leading-relaxed">居抜きを活用し、あなたの出店をサポートします。</p>
+<p class="text-base mb-12 text-gray-600 leading-relaxed">まだ不動産屋などに登録されていない物件まで探せるこのサービス。まずはお気軽に検索してみて下さい。</p>
+<div class="bg-white rounded-2xl shadow-2xl p-8">
+<div class="flex flex-col gap-4">
+<div class="flex gap-4">
+<div class="flex-1 relative">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-map-pin-line text-lg"></i>
 </div>
-<label>営業状態</label>
-<select id="v_status">
-  <option value="CLOSED_PERMANENTLY" selected>CLOSED_PERMANENTLY（完全閉店・廃業）</option>
-  <option value="CLOSED_TEMPORARILY">CLOSED_TEMPORARILY（一時休業）</option>
-  <option value="OPERATIONAL">OPERATIONAL（営業中）</option>
-</select>
-<label>業種タグ（カンマ区切り、任意）</label>
-<input id="v_types" type="text" placeholder="restaurant,cafe" />
-<button onclick="callVacantSearch()">検索</button>
-<pre id="v_result"></pre>
+<input type="text" placeholder="エリアを入力（例：東京都渋谷区）" class="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm focus:outline-none focus:border-primary">
+</div>
+<div class="flex-1 relative">
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-store-2-line text-lg"></i>
+</div>
+<input type="text" placeholder="業種を選択（例：飲食店）" class="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm focus:outline-none focus:border-primary">
+</div>
+</div>
+<a href="demo.html" class="block w-full py-4 bg-secondary text-white font-bold !rounded-button hover:bg-orange-600 transition-colors text-lg whitespace-nowrap text-center">
+<span class="flex items-center justify-center gap-2">
+<span>検索する</span>
+<div class="w-5 h-5 flex items-center justify-center">
+<i class="ri-search-line text-xl"></i>
+</div>
+</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</section>
 
-<script>
-function getBaseUrl() {
-  const v = document.getElementById('baseUrl').value.trim();
-  if (!v) { alert('APIRunのベースURLを入力してください'); throw new Error('base url required'); }
-  return v.replace(/\/$/, '');
-}
+<section id="service" class="py-24 bg-gray-50">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-bold text-gray-900 mb-4">サービスの特徴</h2>
+<p class="text-gray-600 text-lg">いぬきんじょが選ばれる 3 つの理由</p>
+</div>
+<div class="grid grid-cols-3 gap-8">
+<div class="bg-white rounded-2xl p-10 shadow-sm hover:shadow-lg transition-shadow">
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mb-6">
+<i class="ri-search-eye-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-2xl font-bold text-gray-900 mb-4">未公開物件も検索可能</h3>
+<p class="text-gray-600 leading-relaxed">まだ不動産屋などに登録されていない物件まで探せるこのサービス。他では見つからない貴重な居抜き物件情報にアクセスできます。</p>
+</div>
+<div class="bg-white rounded-2xl p-10 shadow-sm hover:shadow-lg transition-shadow">
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mb-6">
+<i class="ri-map-2-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-2xl font-bold text-gray-900 mb-4">マップ検索機能</h3>
+<p class="text-gray-600 leading-relaxed">マップから簡単に検索できる直感的なインターフェース。希望のエリアを視覚的に確認しながら、最適な物件を見つけられます。</p>
+</div>
+<div class="bg-white rounded-2xl p-10 shadow-sm hover:shadow-lg transition-shadow">
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mb-6">
+<i class="ri-filter-3-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-2xl font-bold text-gray-900 mb-4">豊富な業種絞り込み</h3>
+<p class="text-gray-600 leading-relaxed">100 種以上の業種で絞り込んだりできます。飲食店から美容室、クリニックまで、あらゆる業種に対応した検索が可能です。</p>
+</div>
+</div>
+</div>
+</section>
 
-async function postJson(path, body, outputId) {
-  const out = document.getElementById(outputId);
-  out.textContent = '送信中...';
-  try {
-    const res = await fetch(getBaseUrl() + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const text = await res.text();
-    let pretty;
-    try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch (e) { pretty = text; }
-    out.textContent = `HTTP ${res.status}\n${pretty}`;
-  } catch (e) {
-    out.textContent = 'エラー: ' + e.message;
-  }
-}
+<section class="py-24 bg-white">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-bold text-gray-900 mb-4">検索機能</h2>
+<p class="text-gray-600 text-lg">マップと業種から簡単に物件を探せます</p>
+</div>
+<div class="grid grid-cols-2 gap-12 mb-20">
+<div>
+<div class="bg-gray-50 rounded-2xl p-8 h-96 relative overflow-hidden">
+<img src="img/map_placeholder_1280x720.png" alt="マップ" class="absolute inset-0 w-full h-full object-cover object-center">
+<div class="absolute inset-0 flex items-center justify-center">
+<button class="px-8 py-4 bg-white text-primary font-bold !rounded-button shadow-lg hover:shadow-xl transition-all whitespace-nowrap">
+<span class="flex items-center gap-2">
+<div class="w-5 h-5 flex items-center justify-center">
+<i class="ri-map-pin-line text-xl"></i>
+</div>
+<span>マップから検索する</span>
+</span>
+</button>
+</div>
+</div>
+<h3 class="text-2xl font-bold text-gray-900 mt-6 mb-3">インタラクティブマップ検索</h3>
+<p class="text-gray-600">地図上で直接エリアを選択し、周辺の居抜き物件を一目で確認できます。</p>
+</div>
+<div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
+<i class="ri-restaurant-line text-2xl text-primary"></i>
+</div>
+<h4 class="font-bold text-gray-900 mb-2">飲食店</h4>
+<p class="text-sm text-gray-600">2,847 件</p>
+</div>
+<div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
+<i class="ri-scissors-cut-line text-2xl text-secondary"></i>
+</div>
+<h4 class="font-bold text-gray-900 mb-2">美容室</h4>
+<p class="text-sm text-gray-600">1,523 件</p>
+</div>
+<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
+<i class="ri-hospital-line text-2xl text-green-600"></i>
+</div>
+<h4 class="font-bold text-gray-900 mb-2">クリニック</h4>
+<p class="text-sm text-gray-600">892 件</p>
+</div>
+<div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
+<i class="ri-building-line text-2xl text-purple-600"></i>
+</div>
+<h4 class="font-bold text-gray-900 mb-2">オフィス</h4>
+<p class="text-sm text-gray-600">1,156 件</p>
+</div>
+<div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
+<i class="ri-shopping-bag-line text-2xl text-pink-600"></i>
+</div>
+<h4 class="font-bold text-gray-900 mb-2">小売店</h4>
+<p class="text-sm text-gray-600">1,734 件</p>
+</div>
+<div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
+<i class="ri-service-line text-2xl text-yellow-600"></i>
+</div>
+<h4 class="font-bold text-gray-900 mb-2">サービス業</h4>
+<p class="text-sm text-gray-600">2,091 件</p>
+</div>
+</div>
+<h3 class="text-2xl font-bold text-gray-900 mt-6 mb-3">人気業種カテゴリー</h3>
+<p class="text-gray-600">100 種類以上の業種から、あなたのビジネスに最適な物件を見つけられます。</p>
+</div>
+</div>
+</div>
+</section>
 
-function callConsultation() {
-  postJson('/consultations', {
-    query_text: document.getElementById('c_query').value,
-    latitude: parseFloat(document.getElementById('c_lat').value),
-    longitude: parseFloat(document.getElementById('c_lng').value),
-    radius_km: parseFloat(document.getElementById('c_radius').value),
-  }, 'c_result');
-}
+<section id="howto" class="py-24 bg-gray-50">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-bold text-gray-900 mb-4">利用の流れ</h2>
+<p class="text-gray-600 text-lg">簡単 4 ステップで理想の物件が見つかります</p>
+</div>
+<div class="grid grid-cols-4 gap-8">
+<div class="text-center">
+<div class="w-20 h-20 flex items-center justify-center bg-primary text-white rounded-full text-3xl font-bold mx-auto mb-6">1</div>
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mx-auto mb-6">
+<i class="ri-user-add-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-3">無料会員登録</h3>
+<p class="text-gray-600 text-sm leading-relaxed">メールアドレスだけで簡単に登録できます。登録後すぐに全ての機能をご利用いただけます。</p>
+</div>
+<div class="text-center">
+<div class="w-20 h-20 flex items-center justify-center bg-primary text-white rounded-full text-3xl font-bold mx-auto mb-6">2</div>
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mx-auto mb-6">
+<i class="ri-search-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-3">希望条件で検索</h3>
+<p class="text-gray-600 text-sm leading-relaxed">エリア、業種、予算などの条件を設定して、あなたにぴったりの物件を検索します。</p>
+</div>
+<div class="text-center">
+<div class="w-20 h-20 flex items-center justify-center bg-primary text-white rounded-full text-3xl font-bold mx-auto mb-6">3</div>
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mx-auto mb-6">
+<i class="ri-heart-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-3">お気に入り登録</h3>
+<p class="text-gray-600 text-sm leading-relaxed">気になる物件を見つけたら、お気に入りに保存して後からじっくり比較検討できます。</p>
+</div>
+<div class="text-center">
+<div class="w-20 h-20 flex items-center justify-center bg-primary text-white rounded-full text-3xl font-bold mx-auto mb-6">4</div>
+<div class="w-16 h-16 flex items-center justify-center bg-blue-50 rounded-2xl mx-auto mb-6">
+<i class="ri-calendar-check-line text-3xl text-primary"></i>
+</div>
+<h3 class="text-xl font-bold text-gray-900 mb-3">問い合わせ・内見予約</h3>
+<p class="text-gray-600 text-sm leading-relaxed">物件の詳細情報を確認し、内見予約や問い合わせをワンクリックで行えます。</p>
+</div>
+</div>
+</div>
+</section>
 
-function callRegisterResource() {
-  postJson('/resources', {
-    name: document.getElementById('r_name').value,
-    category: document.getElementById('r_category').value,
-    description: document.getElementById('r_description').value,
-    latitude: parseFloat(document.getElementById('r_lat').value),
-    longitude: parseFloat(document.getElementById('r_lng').value),
-  }, 'r_result');
-}
+<section class="py-24 bg-gradient-to-r from-secondary to-orange-500">
+<div class="max-w-5xl mx-auto px-6 text-center">
+<div class="w-24 h-24 flex items-center justify-center bg-white rounded-full mx-auto mb-8">
+<i class="ri-gift-line text-5xl text-secondary"></i>
+</div>
+<h2 class="text-5xl font-bold text-white mb-6">利用は無料です</h2>
+<p class="text-xl text-white opacity-95 mb-10 leading-relaxed">会員登録から物件検索、お気に入り登録、問い合わせまで<br>全ての機能を無料でご利用いただけます</p>
+<a href="demo.html" class="inline-block px-12 py-5 bg-white text-secondary font-bold !rounded-button hover:bg-gray-50 transition-colors text-lg shadow-xl whitespace-nowrap">
+<span class="flex items-center justify-center gap-3">
+<span>今すぐはじめる</span>
+<div class="w-6 h-6 flex items-center justify-center">
+<i class="ri-arrow-right-line text-2xl"></i>
+</div>
+</span>
+</a>
+</div>
+</section>
 
-function callVacantSearch() {
-  const typesRaw = document.getElementById('v_types').value.trim();
-  const types = typesRaw ? typesRaw.split(',').map(s => s.trim()).filter(Boolean) : null;
-  postJson('/vacant-properties/search', {
-    latitude: parseFloat(document.getElementById('v_lat').value),
-    longitude: parseFloat(document.getElementById('v_lng').value),
-    radius_km: parseFloat(document.getElementById('v_radius').value),
-    business_status: document.getElementById('v_status').value,
-    types: types,
-  }, 'v_result');
+<footer class="bg-gray-900 text-gray-300 py-16">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-4 gap-12 mb-12">
+<div>
+<a href="index.html"><div class="font-['Pacifico'] text-2xl text-white mb-4">logo</div></a>
+<p class="text-sm leading-relaxed">居抜き物件候補検索サービス「いぬきんじょ」は、あなたの出店を全力でサポートします。</p>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">サービス</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="demo.html" class="hover:text-white transition-colors">物件検索（動作確認デモ）</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">サポート</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="faq.html" class="hover:text-white transition-colors">よくある質問</a></li>
+<li><a href="contact.html" class="hover:text-white transition-colors">お問い合わせ</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">法的情報</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="terms.html" class="hover:text-white transition-colors">利用規約</a></li>
+<li><a href="privacy.html" class="hover:text-white transition-colors">プライバシーポリシー</a></li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-800 pt-8">
+<div class="flex items-center justify-between">
+<p class="text-sm">&copy; 2026 いぬきんじょ. All rights reserved.</p>
+<div class="flex items-center gap-4">
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-twitter-x-line text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-facebook-fill text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-instagram-line text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-line-fill text-lg"></i>
+</a>
+</div>
+</div>
+</div>
+</div>
+</footer>
+
+<script id="smooth-scroll">
+document.addEventListener('DOMContentLoaded', function() {
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+anchor.addEventListener('click', function(e) {
+e.preventDefault();
+const target = document.querySelector(this.getAttribute('href'));
+if(target) {
+const headerOffset = 80;
+const elementPosition = target.getBoundingClientRect().top;
+const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+window.scrollTo({
+top: offsetPosition,
+behavior: 'smooth'
+});
 }
+});
+});
+});
 </script>
 
 </body>

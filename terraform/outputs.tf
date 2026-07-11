@@ -5,6 +5,11 @@ output "app_run_url" {
   value       = module.cloudrun_app.service_url
 }
 
+output "frontend_url" {
+  description = "動作確認用フロント画面（inuki）のURL（誰でも未認証でアクセス可能）"
+  value       = module.cloudrun_frontend.service_url
+}
+
 output "infer_run_url" {
   description = "推論サービス（InferRun）の内部URL"
   value       = module.cloudrun_inference.service_url

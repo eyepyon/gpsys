@@ -46,6 +46,17 @@ variable "inference_image" {
   type        = string
 }
 
+variable "frontend_service_name" {
+  description = "動作確認用フロント画面（inuki）のCloud Runサービス名"
+  type        = string
+  default     = "inuki"
+}
+
+variable "frontend_image" {
+  description = "動作確認用フロント画面（inuki）のコンテナイメージURL（Artifact Registry等）"
+  type        = string
+}
+
 variable "vacant_sync_job_name" {
   description = "居抜き物件同期サービス（VacantPropertySyncService）のCloud Run Jobs名"
   type        = string
