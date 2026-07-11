@@ -398,8 +398,11 @@ async def _bootstrap_production_dependencies() -> None:
 
 async def _apply_database_migrations(pool: object) -> None:
     """Apply bundled idempotent SQL migrations before serving requests."""
-    migrations_dir = Path(__file__).resolve().parents[2] / "migrations"
-    for migration_path in sorted(migrations_dir.glob("*.sql")):
+    migrations_dir = Path.cwd() / "migrations"
+    migration_paths = sorted(migrations_dir.glob("*.sql"))
+    if not migration_paths:
+        raise RuntimeError(f"DBマイグレーションが見つかりません: {migrations_dir}")
+    for migration_path in migration_paths:
         sql = migration_path.read_text(encoding="utf-8")
         await pool.execute(sql)  # type: ignore[attr-defined]
         logger.info("DBマイグレーションを適用しました: %s", migration_path.name)
