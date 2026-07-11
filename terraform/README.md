@@ -71,7 +71,7 @@ terraform/
 | `environment` | - | `dev` | 環境識別子（リソース名サフィックス） |
 | `app_service_name` | - | `regional-revitalization-api` | APIRunのCloud Runサービス名 |
 | `app_image` | ○ | - | APIRunのコンテナイメージURL |
-| `inference_service_name` | - | `regional-revitalization-infer` | InferRunのCloud Runサービス名 |
+| `inference_service_name` | - | `inuki-gemma4` | InferRun(Gemma 4搭載)のCloud Runサービス名 |
 | `inference_image` | ○ | - | InferRunのコンテナイメージURL |
 | `frontend_service_name` | - | `inuki` | 動作確認用フロント画面(inuki)のCloud Runサービス名 |
 | `frontend_image` | ○ | - | inukiのコンテナイメージURL(nginxで`frontend/index.html`を配信) |

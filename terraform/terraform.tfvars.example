@@ -21,7 +21,7 @@ environment = "dev"
 app_service_name = "regional-revitalization-api"
 app_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/api:latest"
 
-inference_service_name = "regional-revitalization-infer"
+inference_service_name = "inuki-gemma4"
 inference_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/infer:latest"
 
 frontend_service_name = "inuki"

@@ -36,9 +36,9 @@ variable "app_image" {
 }
 
 variable "inference_service_name" {
-  description = "推論サービス（InferRun）のCloud Runサービス名"
+  description = "推論サービス（InferRun、Gemma 4搭載）のCloud Runサービス名"
   type        = string
-  default     = "regional-revitalization-infer"
+  default     = "inuki-gemma4"
 }
 
 variable "inference_image" {

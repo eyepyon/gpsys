@@ -71,6 +71,8 @@ jobs:
             image_name: infer
           - target: vacant_sync
             image_name: vacant-sync
+          - target: frontend
+            image_name: frontend
     outputs:
       image_tag: ${{ steps.image_tag.outputs.tag }}
 
@@ -178,6 +180,7 @@ jobs:
             -var="app_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/api:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="inference_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/infer:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="vacant_sync_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/vacant-sync:${{ needs.build-and-push.outputs.image_tag }}" \
+            -var="frontend_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/frontend:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
             -var="storage_bucket_name=${{ vars.GCP_BUCKET_NAME }}" \
             -var="places_api_key=${{ secrets.PLACES_API_KEY }}" \

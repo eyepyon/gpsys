@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [api, infer, vacant_sync]
+        target: [api, infer, vacant_sync, frontend]
 
     steps:
       - name: リポジトリのチェックアウト
