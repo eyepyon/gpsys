@@ -35,7 +35,7 @@
     </table>
   </div>
 
-  <div class="admin-card">
+  <div id="template-card" class="admin-card">
     <h2 style="font-size:1.05rem; margin-top:0;">検索起点テンプレート</h2>
     <p style="font-size:0.8rem; color:#6b7280;">
       国土交通省「国土数値情報 鉄道データ（2023年）」を加工した駅位置と、県庁所在地主要駅を登録します。
@@ -70,6 +70,9 @@
 <script>
 requireLogin();
 renderAdminNav("search_requests");
+document.getElementById("template-card").before(
+  document.getElementById("search-results-card")
+);
 
 async function loadTemplates() {
   const res = await adminFetch("/admin/search-origin-templates");

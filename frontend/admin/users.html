@@ -83,16 +83,17 @@ async function loadUsers() {
     for (const u of users) {
       const tr = document.createElement("tr");
       const isSelf = u.username === currentUsername;
+      const isInitialAdmin = u.username === "admin";
       tr.innerHTML = `
         <td>${u.username}${isSelf ? " (自分)" : ""}</td>
         <td>${u.display_name}</td>
         <td>${u.role}</td>
         <td>${u.is_active ? "有効" : "無効"}</td>
         <td>
-          <button class="admin-btn secondary toggle-btn" data-id="${u.admin_user_id}" data-active="${u.is_active}">
+          <button class="admin-btn secondary toggle-btn" data-id="${u.admin_user_id}" data-active="${u.is_active}" ${isInitialAdmin ? "disabled" : ""}>
             ${u.is_active ? "無効化" : "有効化"}
           </button>
-          <button class="admin-btn danger delete-btn" data-id="${u.admin_user_id}" ${isSelf ? "disabled" : ""}>
+          <button class="admin-btn danger delete-btn" data-id="${u.admin_user_id}" ${isSelf || isInitialAdmin ? "disabled" : ""}>
             削除
           </button>
         </td>

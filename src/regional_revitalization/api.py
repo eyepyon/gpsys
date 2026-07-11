@@ -965,6 +965,8 @@ async def admin_update_user(
     existing = await admin_user_repository.get_by_id(target_id)
     if existing is None:
         raise HTTPException(status_code=404, detail="管理ユーザーが見つかりません")
+    if existing.username == "admin" and body.is_active is False:
+        raise HTTPException(status_code=400, detail="初期管理者adminは無効化できません")
 
     from regional_revitalization.admin_auth import hash_password as _hash_password
 
@@ -991,6 +993,11 @@ async def admin_delete_user(
 
     if target_id == current_user.admin_user_id:
         raise HTTPException(status_code=400, detail="自分自身を削除することはできません")
+    target = await admin_user_repository.get_by_id(target_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="管理ユーザーが見つかりません")
+    if target.username == "admin":
+        raise HTTPException(status_code=400, detail="初期管理者adminは削除できません")
 
     await admin_user_repository.delete(target_id)
 
