@@ -181,6 +181,8 @@ jobs:
             -var="inference_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/infer:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="vacant_sync_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/vacant-sync:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="frontend_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/frontend:${{ needs.build-and-push.outputs.image_tag }}" \
+            -var="app_allow_unauthenticated=true" \
+            -var="app_cors_allowed_origins=${{ vars.APP_CORS_ALLOWED_ORIGINS || 'https://inuki-804626259225.us-central1.run.app' }}" \
             -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
             -var="admin_initial_password=${{ secrets.ADMIN_INITIAL_PASSWORD }}" \
             -var="admin_places_api_key=${{ secrets.ADMIN_PLACES_API_KEY }}" \
