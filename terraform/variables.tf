@@ -124,7 +124,7 @@ variable "places_api_key" {
 variable "vacant_sync_schedule" {
   description = "居抜き物件同期サービスのCloud Schedulerによる実行スケジュール（unix-cron形式）"
   type        = string
-  default     = "0 3 * * *" # 日次(毎日03:00 UTC)実行を既定とする
+  default     = "*/10 * * * *" # 10分ごとに実行する
 }
 
 variable "vacant_sync_time_zone" {

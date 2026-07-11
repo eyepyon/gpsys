@@ -29,4 +29,4 @@ COPY src ./src
 
 USER appuser
 
-CMD ["python", "-m", "regional_revitalization.vacant_property_sync_job"]
+CMD ["python", "-m", "regional_revitalization.vacant_property_discovery_job"]
