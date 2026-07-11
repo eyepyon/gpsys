@@ -25,6 +25,20 @@
       <tbody id="type-rows"></tbody></table>
   </div>
 
+  <div class="admin-card">
+    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB クラスタ数</h2>
+    <table class="admin-table"><thead><tr><th>カテゴリ</th><th>件数</th></tr></thead>
+      <tbody id="cluster-rows"></tbody></table>
+  </div>
+
+  <div class="admin-card">
+    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB分布</h2>
+    <p style="font-size:0.8rem; color:#6b7280;">
+      居抜き物件の検索・分析に使うembeddingを2次元に圧縮した分布表示です。
+    </p>
+    <canvas id="vector-canvas" width="900" height="500" style="max-width:100%; border:1px solid #e5e7eb; border-radius:8px;"></canvas>
+  </div>
+
 </div>
 
 <script src="common.js"></script>
@@ -39,6 +53,39 @@ function fillTable(id, rows, keyName, valueName) {
     .join("");
 }
 
+function categoryColor(category) {
+  let hash = 0;
+  for (let i = 0; i < category.length; i++) {
+    hash = (hash * 31 + category.charCodeAt(i)) % 360;
+  }
+  return `hsl(${hash}, 65%, 50%)`;
+}
+
+function drawScatter(points) {
+  const canvas = document.getElementById("vector-canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (points.length === 0) {
+    ctx.fillStyle = "#9ca3af";
+    ctx.fillText("データがありません", 20, 30);
+    return;
+  }
+  const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 30;
+  const scaleX = (x) => maxX === minX ? canvas.width / 2 : pad + ((x - minX) / (maxX - minX)) * (canvas.width - pad * 2);
+  const scaleY = (y) => maxY === minY ? canvas.height / 2 : canvas.height - pad - ((y - minY) / (maxY - minY)) * (canvas.height - pad * 2);
+  for (const p of points) {
+    ctx.beginPath();
+    ctx.arc(scaleX(p.x), scaleY(p.y), 4, 0, 2 * Math.PI);
+    ctx.fillStyle = categoryColor(p.category);
+    ctx.globalAlpha = 0.75;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 async function load() {
   const errorEl = document.getElementById("error");
   try {
@@ -48,6 +95,8 @@ async function load() {
 
     fillTable("muni-vacant-rows", data.municipality_counts_vacant_properties, "municipality", "count");
     fillTable("type-rows", data.type_counts, "type_tag", "count");
+    fillTable("cluster-rows", data.cluster_counts, "category", "count");
+    drawScatter(data.vector_points);
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.style.display = "block";
