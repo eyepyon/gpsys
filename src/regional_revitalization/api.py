@@ -51,6 +51,7 @@ from regional_revitalization.admin_auth import (
     InMemoryAdminUserRepository,
     authenticate,
     create_admin_user,
+    hash_password,
     resolve_session,
 )
 from regional_revitalization.admin_stats import (
@@ -388,17 +389,15 @@ async def _bootstrap_production_dependencies() -> None:
 async def _bootstrap_initial_admin_user(
     admin_user_repository: AdminUserRepository,
 ) -> None:
-    """管理ユーザーが1件も存在しない場合、環境変数から初回管理者を自動作成する。
+    """環境変数を基準に初期管理者を作成またはパスワード同期する。
 
     環境変数`ADMIN_INITIAL_USERNAME`/`ADMIN_INITIAL_PASSWORD`が両方設定されて
     いる場合のみ実行する（Terraform経由でSecret Managerから注入する想定）。
+    同じユーザー名が既に存在する場合は、パスワードをSecretの値に同期する。
     これにより、管理画面へのログイン手段が皆無になる「鶏と卵」問題を避ける。
     2件目以降の管理ユーザーは、この初回アカウントでログインした管理画面上の
     ユーザー管理ページから作成する。
     """
-    if await admin_user_repository.count() > 0:
-        return
-
     initial_username = os.environ.get("ADMIN_INITIAL_USERNAME")
     initial_password = os.environ.get("ADMIN_INITIAL_PASSWORD")
     if not initial_username or not initial_password:
@@ -406,6 +405,23 @@ async def _bootstrap_initial_admin_user(
             "管理ユーザーが1件も存在しませんが、ADMIN_INITIAL_USERNAME/"
             "ADMIN_INITIAL_PASSWORDが未設定のため初回管理者を作成できません"
         )
+        return
+
+    existing_user = await admin_user_repository.get_by_username(initial_username)
+    if existing_user is not None:
+        await admin_user_repository.update(
+            existing_user.admin_user_id,
+            display_name=None,
+            password_hash=hash_password(initial_password),
+            is_active=True,
+        )
+        logger.info(
+            "初期管理ユーザーのパスワードを環境変数と同期しました: username=%s",
+            initial_username,
+        )
+        return
+
+    if await admin_user_repository.count() > 0:
         return
 
     await create_admin_user(
