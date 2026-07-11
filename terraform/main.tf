@@ -28,6 +28,11 @@ locals {
     # workloadIdentityUser`を付与済みでも`google-github-actions/auth`の
     # トークン取得がPERMISSION_DENIEDになる。
     "iamcredentials.googleapis.com",
+    # Artifact Registry API。コンテナイメージのpull/push（docker
+    # push/pull、`google_artifact_registry_repository`の作成・利用）に必須。
+    # 有効化されていないと`docker push`が
+    # 「Artifact Registry API has not been used...」で失敗する。
+    "artifactregistry.googleapis.com",
   ]
 }
 

@@ -38,6 +38,7 @@
   - `aiplatform.googleapis.com`
   - `iam.googleapis.com`
   - `iamcredentials.googleapis.com`（Workload Identity Federation経由のなりすまし（impersonation）に必須）
+  - `artifactregistry.googleapis.com`（コンテナイメージのpush/pullに必須）
 
 ## ディレクトリ構成
 
