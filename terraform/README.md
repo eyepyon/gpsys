@@ -1,0 +1,143 @@
+# Terraform構成: 地方創生支援システム
+
+本ディレクトリは、`design.md`「コンポーネント6: IaC (Terraform)」および
+Requirements 7.1, 8.4, 9.1, 10.1〜10.3, 13.6に基づき作成した、
+地方創生支援システム（regional-revitalization-support-system）のGCPインフラを
+コード化したTerraform構成である。
+
+## 重要な注記: 実行検証について
+
+**本コードは、Terraform CLIが利用できない開発環境で作成された。**
+そのため、`terraform init` / `terraform validate` / `terraform plan` /
+`terraform apply` による実際の実行検証は、本フェーズでは行っていない。
+構文・構造の妥当性はコードレビューレベルでのみ確認済みである。
+
+実際の`init`/`validate`/`plan`/`apply`は、Terraform CLI（および`gcloud`認証、
+対象GCPプロジェクトへの権限）が利用可能な別環境で実施する必要がある。
+適用前に必ず以下を行うこと。
+
+1. `terraform init` でプロバイダを初期化する
+2. `terraform validate` で構文エラーがないことを確認する
+3. `terraform plan` で作成される変更内容を確認する
+4. 内容に問題がなければ `terraform apply` を実行する
+
+## ディレクトリ構成
+
+```
+terraform/
+├── versions.tf                 # Terraform/プロバイダのバージョン制約
+├── variables.tf                 # ルート構成の入力変数
+├── main.tf                      # 各モジュールの呼び出し、API有効化
+├── outputs.tf                   # ルート構成の出力値
+├── terraform.tfvars.example      # 変数のサンプル（実際の値・機密情報は含まない）
+└── modules/
+    ├── network/                              # VPCコネクタ + Private Services Access
+    ├── cloudsql/                              # Cloud SQL for PostgreSQL + Secret Manager(DB接続情報)
+    ├── storage/                               # 非公開Cloud Storageバケット
+    ├── cloudrun_app/                          # アプリ本体サービス(APIRun)
+    ├── cloudrun_inference/                    # 推論サービス(InferRun, GPU L4)
+    ├── cloudrun_jobs_vacant_property_sync/    # 居抜き物件同期サービス(Cloud Run Jobs) + Secret Manager(Places APIキー)
+    └── scheduler/                             # Cloud Scheduler(定期トリガー)
+```
+
+## 前提条件
+
+- 既にプロビジョニング済みのGCPプロジェクトが存在すること（`tasks.md`のNotes参照）
+- 課金設定が有効化されていること
+- 実行するTerraformの認証情報（サービスアカウントまたはユーザー認証）に、
+  Cloud Run/Cloud SQL/Cloud Storage/VPC Access/Secret Manager/Cloud Scheduler/
+  IAM/Service Usageに対する十分な権限があること
+- 対象GCPプロジェクトで以下のAPIが有効化可能であること（`main.tf`内で
+  `google_project_service`により有効化を試みるが、組織ポリシーにより
+  制限される場合は事前に有効化しておくこと）
+  - `run.googleapis.com`
+  - `sqladmin.googleapis.com`
+  - `servicenetworking.googleapis.com`
+  - `vpcaccess.googleapis.com`
+  - `secretmanager.googleapis.com`
+  - `storage.googleapis.com`
+  - `cloudscheduler.googleapis.com`
+  - `aiplatform.googleapis.com`
+  - `iam.googleapis.com`
+
+## 必要な変数一覧
+
+| 変数名 | 必須 | デフォルト | 説明 |
+|---|---|---|---|
+| `project_id` | ○ | - | GCPプロジェクトID |
+| `region` | - | `us-central1` | 全リソースの作成リージョン（変更しないこと） |
+| `environment` | - | `dev` | 環境識別子（リソース名サフィックス） |
+| `app_service_name` | - | `regional-revitalization-api` | APIRunのCloud Runサービス名 |
+| `app_image` | ○ | - | APIRunのコンテナイメージURL |
+| `inference_service_name` | - | `regional-revitalization-infer` | InferRunのCloud Runサービス名 |
+| `inference_image` | ○ | - | InferRunのコンテナイメージURL |
+| `vacant_sync_job_name` | - | `vacant-property-sync` | 居抜き物件同期サービスのCloud Run Jobs名 |
+| `vacant_sync_image` | ○ | - | 居抜き物件同期サービスのコンテナイメージURL |
+| `vpc_network_name` | - | `default` | VPCコネクタを紐づける対象VPCネットワーク名 |
+| `vpc_connector_cidr` | - | `10.8.0.0/28` | VPCアクセスコネクタのCIDR範囲(/28) |
+| `db_instance_name` | - | `regional-revitalization-db` | Cloud SQLインスタンス名 |
+| `db_tier` | - | `db-custom-2-8192` | Cloud SQLのマシンタイプ |
+| `db_name` | - | `regional_revitalization` | アプリケーション用DB名 |
+| `db_user` | - | `app_user` | アプリケーション用DBユーザー名 |
+| `db_password` | ○（機密） | - | アプリケーション用DBユーザーのパスワード |
+| `storage_bucket_name` | ○ | - | 地域資源ファイル保存用バケット名（グローバル一意） |
+| `places_api_key` | ○（機密） | - | Google Maps Platform Places APIキー |
+| `vacant_sync_schedule` | - | `0 3 * * *` | 同期サービスの実行スケジュール(unix-cron) |
+| `vacant_sync_time_zone` | - | `Etc/UTC` | スケジュールのタイムゾーン |
+| `labels` | - | `{app = "regional-revitalization"}` | 全リソース共通ラベル |
+
+`db_password`・`places_api_key`は`sensitive = true`を付与しているため、
+CLIの標準出力・`plan`差分表示には平文が表示されない。ただし、実際の値は
+これらの変数からSecret Managerシークレットの初期バージョンとして書き込まれる。
+
+## 機密情報の取り扱い方針
+
+- `db_password`・`places_api_key`は**`terraform.tfvars`に平文で記載しないこと**。
+  `terraform.tfvars.example`を参考にしつつ、実行時は環境変数
+  (`TF_VAR_db_password`, `TF_VAR_places_api_key`)またはCI/CDのシークレット
+  ストアから注入すること
+- 上記2つの機密変数はDB接続情報／Places APIキーとして最終的に
+  Secret Manager（`google_secret_manager_secret_version`）に格納される。
+  アプリケーション（APIRun/InferRun/居抜き物件同期サービス）はSecret Manager
+  経由（Cloud Runの`secret_key_ref`）でこれらの値を環境変数として受け取り、
+  コンテナイメージや設定ファイルに平文を書き込まない
+- Places APIキーへのSecret Managerアクセス権限（`roles/secretmanager.secretAccessor`）は、
+  居抜き物件同期サービスの実行用サービスアカウントにのみ付与する
+  （`modules/cloudrun_jobs_vacant_property_sync/main.tf`）。APIRun/InferRunの
+  サービスアカウントには付与しない
+- **tfstateに関する制約**: `sensitive = true`はCLI出力の抑制のみであり、
+  値自体はtfstateファイルの属性値として保存される。これはTerraformの一般的な
+  制約である。運用時は以下を推奨する:
+  - tfstateはリモートバックエンド（例: 暗号化・アクセス制御されたGCSバケット）に
+    保存する（`versions.tf`内にコメントアウトした設定例を記載している）
+  - tfstateファイルへのアクセス権限を最小化する
+  - 機密値のローテーションはSecret Manager側（`gcloud secrets versions add`等）
+    で行い、Terraformの再適用による意図しない値の上書きを避ける運用も検討する
+
+## リージョンについて
+
+すべてのリソースは`region`変数（デフォルト: `us-central1`）に従って作成される。
+design.mdの方針（GPU L4はus-central1でホスト）に合わせ、デフォルト値を
+`us-central1`としている。他リージョンへの変更は推論サービスのGPU可用性の
+制約により推奨しない。
+
+## モジュール概要
+
+- `modules/network`: Serverless VPC Access コネクタ、およびCloud SQLの
+  プライベートIP接続に必要なPrivate Services Access(VPCピアリング)
+- `modules/cloudsql`: Cloud SQL for PostgreSQLインスタンス（プライベートIPのみ、
+  `google_ml_integration`拡張有効化フラグ）、DB/ユーザー作成、
+  DB接続情報のSecret Manager登録
+- `modules/storage`: 非公開Cloud Storageバケット（`uniform_bucket_level_access`,
+  `public_access_prevention = "enforced"`）
+- `modules/cloudrun_app`: APIRun（アプリ本体サービス）のCloud Runサービス
+- `modules/cloudrun_inference`: InferRun（推論サービス、GPU L4、内部限定公開）の
+  Cloud Runサービス
+- `modules/cloudrun_jobs_vacant_property_sync`: 居抜き物件同期サービスの
+  Cloud Run Jobs、Places APIキーのSecret Manager登録・アクセス制御
+- `modules/scheduler`: Cloud Schedulerによる定期トリガー（居抜き物件同期サービス起動）
+
+## コーディング規約
+
+本Terraformコードのコメントはすべて日本語で記述し、ファイルはUTF-8エンコーディング・
+LF改行コードで保存している（Requirements 11参照）。
