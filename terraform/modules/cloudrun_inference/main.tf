@@ -21,6 +21,14 @@ resource "google_cloud_run_v2_service" "inference" {
   name     = var.service_name
   location = var.region
 
+  # google_cloud_run_v2_serviceの`deletion_protection`はデフォルトtrueであり、
+  # 設定変更等でリソースの再作成（destroy→create）が必要になった場合、
+  # 明示的にfalseにしていないとapply自体が
+  # 「cannot destroy service without setting deletion_protection=false」で
+  # 失敗する。本サービスは開発環境での運用を前提とし、GPU設定変更等で
+  # 再作成が発生しうるため、falseとする。
+  deletion_protection = false
+
   # design.md Security Considerations:
   # 「APIRunからInferRunへの呼び出しはCloud RunのIAM認証を用い、
   #  InferRunはallUsersに公開しない」

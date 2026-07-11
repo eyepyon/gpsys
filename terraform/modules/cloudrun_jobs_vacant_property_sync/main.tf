@@ -54,6 +54,14 @@ resource "google_cloud_run_v2_job" "vacant_sync" {
   name     = var.job_name
   location = var.region
 
+  # google_cloud_run_v2_jobの`deletion_protection`はデフォルトtrueであり、
+  # 設定変更等でリソースの再作成（destroy→create）が必要になった場合、
+  # 明示的にfalseにしていないとapply自体が
+  # 「cannot destroy job without setting deletion_protection=false」で
+  # 失敗する。本サービスは開発環境での運用を前提とし、環境変数・イメージ等の
+  # 変更で再作成が発生しうるため、falseとする。
+  deletion_protection = false
+
   template {
     template {
       service_account = google_service_account.vacant_sync_sa.email
