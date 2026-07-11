@@ -27,6 +27,13 @@ inference_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regiona
 frontend_service_name = "inuki"
 frontend_image        = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/frontend:latest"
 
+app_allow_unauthenticated = true
+app_cors_allowed_origins  = "https://inuki-xxxxx.us-central1.run.app"
+
+# 管理画面(/admin/)の初回管理者アカウント。admin_initial_passwordはサンプルに
+# 含めない。TF_VAR_admin_initial_password環境変数等で渡すこと。
+admin_initial_username = "admin"
+
 vacant_sync_job_name = "vacant-property-sync"
 vacant_sync_image    = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/vacant-sync:latest"
 

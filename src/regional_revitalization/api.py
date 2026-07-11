@@ -39,18 +39,40 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from regional_revitalization.admin_auth import (
+    AdminUser,
+    AdminUserRepository,
+    InMemoryAdminUserRepository,
+    authenticate,
+    create_admin_user,
+    resolve_session,
+)
+from regional_revitalization.admin_stats import (
+    AdminStatsRepository,
+    InMemoryAdminStatsRepository,
+)
 from regional_revitalization.consultation import generate_consultation_response
 from regional_revitalization.inference import InferenceClient, MockInferenceClient
-from regional_revitalization.models import ConsultationRequest, GeoPoint
+from regional_revitalization.models import (
+    ConsultationRequest,
+    GeoPoint,
+    RegionalResource,
+)
 from regional_revitalization.registration import register_resource
 from regional_revitalization.repository import (
     InMemoryResourceRepository,
     ResourceRepository,
+)
+from regional_revitalization.resource_management import (
+    delete_resource,
+    search_resources_in_bounds,
+    update_resource,
 )
 from regional_revitalization.storage import InMemoryStorageClient, StorageClient
 from regional_revitalization.vacant_property import (
@@ -87,8 +109,8 @@ if _cors_allowed_origins:
         allow_origins=[
             origin.strip() for origin in _cors_allowed_origins.split(",") if origin.strip()
         ],
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["Content-Type", "Authorization"],
     )
 
 
@@ -103,6 +125,12 @@ _storage_client: StorageClient = InMemoryStorageClient()
 _inference_client: InferenceClient = MockInferenceClient()
 _vacant_property_repository: VacantPropertyRepository = (
     InMemoryVacantPropertyRepository()
+)
+_admin_user_repository: AdminUserRepository = InMemoryAdminUserRepository()
+_admin_stats_repository: AdminStatsRepository = InMemoryAdminStatsRepository(
+    resource_repository=_resource_repository,
+    vacant_property_repository=_vacant_property_repository,
+    admin_user_repository=_admin_user_repository,
 )
 
 
@@ -124,6 +152,16 @@ def get_inference_client() -> InferenceClient:
 def get_vacant_property_repository() -> VacantPropertyRepository:
     """共有の`VacantPropertyRepository`インスタンスを返す（`Depends`用）。"""
     return _vacant_property_repository
+
+
+def get_admin_user_repository() -> AdminUserRepository:
+    """共有の`AdminUserRepository`インスタンスを返す（`Depends`用）。"""
+    return _admin_user_repository
+
+
+def get_admin_stats_repository() -> AdminStatsRepository:
+    """共有の`AdminStatsRepository`インスタンスを返す（`Depends`用）。"""
+    return _admin_stats_repository
 
 
 def set_resource_repository(repository: ResourceRepository) -> None:
@@ -158,6 +196,18 @@ def set_vacant_property_repository(repository: VacantPropertyRepository) -> None
     _vacant_property_repository = repository
 
 
+def set_admin_user_repository(repository: AdminUserRepository) -> None:
+    """共有の`AdminUserRepository`インスタンスを差し替える。"""
+    global _admin_user_repository
+    _admin_user_repository = repository
+
+
+def set_admin_stats_repository(repository: AdminStatsRepository) -> None:
+    """共有の`AdminStatsRepository`インスタンスを差し替える。"""
+    global _admin_stats_repository
+    _admin_stats_repository = repository
+
+
 # --------------------------------------------------------------------------
 # 起動時ブートストラップ（実運用実装への差し替え）
 # --------------------------------------------------------------------------
@@ -176,6 +226,12 @@ async def _bootstrap_production_dependencies() -> None:
         try:
             import asyncpg
 
+            from regional_revitalization.postgres_admin_auth_repository import (
+                PostgresAdminUserRepository,
+            )
+            from regional_revitalization.admin_stats import (
+                PostgresAdminStatsRepository,
+            )
             from regional_revitalization.postgres_repository import (
                 PostgresResourceRepository,
             )
@@ -188,7 +244,12 @@ async def _bootstrap_production_dependencies() -> None:
             set_vacant_property_repository(
                 PostgresVacantPropertyRepository(pool)
             )
+            admin_user_repository = PostgresAdminUserRepository(pool)
+            set_admin_user_repository(admin_user_repository)
+            set_admin_stats_repository(PostgresAdminStatsRepository(pool))
             logger.info("Cloud SQL for PostgreSQLへの接続を初期化しました")
+
+            await _bootstrap_initial_admin_user(admin_user_repository)
         except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
             logger.exception("Cloud SQLへの接続初期化に失敗しました")
             raise
@@ -216,6 +277,38 @@ async def _bootstrap_production_dependencies() -> None:
         except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
             logger.exception("推論サービスクライアントの初期化に失敗しました")
             raise
+
+
+async def _bootstrap_initial_admin_user(
+    admin_user_repository: AdminUserRepository,
+) -> None:
+    """管理ユーザーが1件も存在しない場合、環境変数から初回管理者を自動作成する。
+
+    環境変数`ADMIN_INITIAL_USERNAME`/`ADMIN_INITIAL_PASSWORD`が両方設定されて
+    いる場合のみ実行する（Terraform経由でSecret Managerから注入する想定）。
+    これにより、管理画面へのログイン手段が皆無になる「鶏と卵」問題を避ける。
+    2件目以降の管理ユーザーは、この初回アカウントでログインした管理画面上の
+    ユーザー管理ページから作成する。
+    """
+    if await admin_user_repository.count() > 0:
+        return
+
+    initial_username = os.environ.get("ADMIN_INITIAL_USERNAME")
+    initial_password = os.environ.get("ADMIN_INITIAL_PASSWORD")
+    if not initial_username or not initial_password:
+        logger.warning(
+            "管理ユーザーが1件も存在しませんが、ADMIN_INITIAL_USERNAME/"
+            "ADMIN_INITIAL_PASSWORDが未設定のため初回管理者を作成できません"
+        )
+        return
+
+    await create_admin_user(
+        admin_user_repository,
+        username=initial_username,
+        plain_password=initial_password,
+        display_name="初期管理者",
+    )
+    logger.info("初回管理ユーザーを作成しました: username=%s", initial_username)
 
 
 # --------------------------------------------------------------------------
@@ -487,3 +580,463 @@ def search_vacant_properties_endpoint(
             for candidate in candidates
         ]
     )
+
+
+# --------------------------------------------------------------------------
+# 管理画面向けエンドポイント（/admin/*）
+# --------------------------------------------------------------------------
+# フロント画面(inuki)の/admin/配下の管理画面から呼び出される。
+# ログイン以外の全エンドポイントは`Depends(get_current_admin_user)`により
+# 有効なセッショントークン（Authorization: Bearer <token>）を要求する。
+
+
+class AdminLoginRequestBody(BaseModel):
+    """`POST /admin/auth/login`のリクエストボディ。"""
+
+    username: str = Field(..., description="ログインID")
+    password: str = Field(..., description="パスワード")
+
+
+class AdminLoginResponseBody(BaseModel):
+    """`POST /admin/auth/login`のレスポンスボディ。"""
+
+    session_token: str
+    display_name: str
+
+
+class AdminUserBody(BaseModel):
+    """管理ユーザー1件分のレスポンス表現（password_hashは含まない）。"""
+
+    admin_user_id: str
+    username: str
+    display_name: str
+    role: str
+    is_active: bool
+
+
+class AdminUserCreateRequestBody(BaseModel):
+    """`POST /admin/users`のリクエストボディ。"""
+
+    username: str = Field(..., description="ログインID")
+    password: str = Field(..., description="パスワード（8文字以上）")
+    display_name: str = Field(..., description="表示名")
+
+
+class AdminUserUpdateRequestBody(BaseModel):
+    """`PATCH /admin/users/{admin_user_id}`のリクエストボディ。
+
+    指定しなかった項目（Noneのまま）は変更しない。
+    """
+
+    display_name: str | None = Field(default=None, description="表示名")
+    password: str | None = Field(default=None, description="新しいパスワード（8文字以上）")
+    is_active: bool | None = Field(default=None, description="有効/無効フラグ")
+
+
+class DashboardSummaryBody(BaseModel):
+    """`GET /admin/dashboard`のレスポンスボディ。"""
+
+    regional_resource_count: int
+    vacant_property_count: int
+    consultation_log_count: int
+    pending_update_request_count: int
+    admin_user_count: int
+
+
+class MunicipalityCountBody(BaseModel):
+    """市町村別データ数の1件分。"""
+
+    municipality: str
+    count: int
+
+
+class TypeCountBody(BaseModel):
+    """業種別データ数の1件分。"""
+
+    type_tag: str
+    count: int
+
+
+class VectorPointBody(BaseModel):
+    """ベクトル分布散布図用の1点分。"""
+
+    resource_id: str
+    category: str
+    x: float
+    y: float
+
+
+class ClusterCountBody(BaseModel):
+    """カテゴリ別クラスタ数の1件分。"""
+
+    category: str
+    count: int
+
+
+class StatsResponseBody(BaseModel):
+    """`GET /admin/stats`のレスポンスボディ。"""
+
+    municipality_counts_resources: list[MunicipalityCountBody]
+    municipality_counts_vacant_properties: list[MunicipalityCountBody]
+    type_counts: list[TypeCountBody]
+    vector_points: list[VectorPointBody]
+    cluster_counts: list[ClusterCountBody]
+
+
+def _authorization_to_token(authorization: str | None) -> str:
+    """`Authorization: Bearer <token>`ヘッダーからトークン文字列を取り出す。
+
+    ヘッダーが無い、または形式が不正な場合は401を返す。
+    """
+    if authorization is None:
+        raise HTTPException(status_code=401, detail="ログインが必要です")
+    scheme, _, token = authorization.partition(" ")
+    if scheme != "Bearer" or not token:
+        raise HTTPException(status_code=401, detail="ログインが必要です")
+    return token
+
+
+async def get_current_admin_user(
+    authorization: str | None = Header(default=None),
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> AdminUser:
+    """`Authorization: Bearer <session_token>`ヘッダーから、ログイン中の
+
+    管理ユーザーを解決する（`Depends`用）。無効・期限切れの場合は401を返す。
+    """
+    token = _authorization_to_token(authorization)
+    try:
+        return await resolve_session(admin_user_repository, token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+
+def _admin_user_to_body(user: AdminUser) -> AdminUserBody:
+    return AdminUserBody(
+        admin_user_id=str(user.admin_user_id),
+        username=user.username,
+        display_name=user.display_name,
+        role=user.role,
+        is_active=user.is_active,
+    )
+
+
+@app.post("/admin/auth/login", response_model=AdminLoginResponseBody)
+async def admin_login(
+    body: AdminLoginRequestBody,
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> AdminLoginResponseBody:
+    """管理ユーザーのユーザー名・パスワードによるログイン。
+
+    成功時はセッショントークンを発行する。ユーザー名の存在有無を区別しない
+    統一エラーメッセージで401を返す（列挙攻撃対策）。
+    """
+    try:
+        session = await authenticate(admin_user_repository, body.username, body.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    user = await admin_user_repository.get_by_id(session.admin_user_id)
+    assert user is not None  # authenticate直後のため必ず存在する
+    return AdminLoginResponseBody(
+        session_token=session.session_token, display_name=user.display_name
+    )
+
+
+@app.post("/admin/auth/logout", status_code=204, response_model=None)
+async def admin_logout(
+    authorization: str | None = Header(default=None),
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> None:
+    """現在のセッションを失効させる（ログアウト）。"""
+    token = _authorization_to_token(authorization)
+    await admin_user_repository.delete_session(token)
+
+
+@app.get("/admin/auth/me", response_model=AdminUserBody)
+async def admin_me(
+    current_user: AdminUser = Depends(get_current_admin_user),
+) -> AdminUserBody:
+    """現在ログイン中の管理ユーザー情報を返す。"""
+    return _admin_user_to_body(current_user)
+
+
+@app.get("/admin/users", response_model=list[AdminUserBody])
+async def admin_list_users(
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> list[AdminUserBody]:
+    """管理ユーザーの一覧を返す（管理ユーザー管理ページ用）。"""
+    users = await admin_user_repository.list_all()
+    return [_admin_user_to_body(user) for user in users]
+
+
+@app.post("/admin/users", response_model=AdminUserBody, status_code=201)
+async def admin_create_user(
+    body: AdminUserCreateRequestBody,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> AdminUserBody:
+    """新規管理ユーザーを作成する。"""
+    try:
+        user = await create_admin_user(
+            admin_user_repository, body.username, body.password, body.display_name
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _admin_user_to_body(user)
+
+
+@app.patch("/admin/users/{admin_user_id}", response_model=AdminUserBody)
+async def admin_update_user(
+    admin_user_id: str,
+    body: AdminUserUpdateRequestBody,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> AdminUserBody:
+    """管理ユーザーの表示名・パスワード・有効フラグを更新する。"""
+    try:
+        target_id = UUID(admin_user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="admin_user_idの形式が不正です") from exc
+
+    if body.password is not None and len(body.password) < 8:
+        raise HTTPException(status_code=400, detail="パスワードは8文字以上である必要があります")
+
+    existing = await admin_user_repository.get_by_id(target_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="管理ユーザーが見つかりません")
+
+    from regional_revitalization.admin_auth import hash_password as _hash_password
+
+    new_hash = _hash_password(body.password) if body.password is not None else None
+    await admin_user_repository.update(
+        target_id, body.display_name, new_hash, body.is_active
+    )
+    updated = await admin_user_repository.get_by_id(target_id)
+    assert updated is not None
+    return _admin_user_to_body(updated)
+
+
+@app.delete("/admin/users/{admin_user_id}", status_code=204, response_model=None)
+async def admin_delete_user(
+    admin_user_id: str,
+    current_user: AdminUser = Depends(get_current_admin_user),
+    admin_user_repository: AdminUserRepository = Depends(get_admin_user_repository),
+) -> None:
+    """管理ユーザーを削除する。自分自身は削除できない（管理者ゼロ人化の防止）。"""
+    try:
+        target_id = UUID(admin_user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="admin_user_idの形式が不正です") from exc
+
+    if target_id == current_user.admin_user_id:
+        raise HTTPException(status_code=400, detail="自分自身を削除することはできません")
+
+    await admin_user_repository.delete(target_id)
+
+
+@app.get("/admin/dashboard", response_model=DashboardSummaryBody)
+async def admin_dashboard(
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    admin_stats_repository: AdminStatsRepository = Depends(get_admin_stats_repository),
+) -> DashboardSummaryBody:
+    """ダッシュボードの概要統計（全体の状況）を返す。"""
+    summary = await admin_stats_repository.get_dashboard_summary()
+    return DashboardSummaryBody(
+        regional_resource_count=summary.regional_resource_count,
+        vacant_property_count=summary.vacant_property_count,
+        consultation_log_count=summary.consultation_log_count,
+        pending_update_request_count=summary.pending_update_request_count,
+        admin_user_count=summary.admin_user_count,
+    )
+
+
+@app.get("/admin/stats", response_model=StatsResponseBody)
+async def admin_stats(
+    vector_points_limit: int = 500,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    admin_stats_repository: AdminStatsRepository = Depends(get_admin_stats_repository),
+) -> StatsResponseBody:
+    """統計情報ページ用の集計データ（市町村別・業種別・ベクトル分布）を返す。"""
+    municipality_resources = await admin_stats_repository.get_municipality_counts_resources()
+    municipality_vacant = (
+        await admin_stats_repository.get_municipality_counts_vacant_properties()
+    )
+    type_counts = await admin_stats_repository.get_type_counts()
+    vector_points = await admin_stats_repository.get_vector_points(vector_points_limit)
+    cluster_counts = await admin_stats_repository.get_cluster_counts()
+
+    return StatsResponseBody(
+        municipality_counts_resources=[
+            MunicipalityCountBody(municipality=m.municipality, count=m.count)
+            for m in municipality_resources
+        ],
+        municipality_counts_vacant_properties=[
+            MunicipalityCountBody(municipality=m.municipality, count=m.count)
+            for m in municipality_vacant
+        ],
+        type_counts=[
+            TypeCountBody(type_tag=t.type_tag, count=t.count) for t in type_counts
+        ],
+        vector_points=[
+            VectorPointBody(
+                resource_id=p.resource_id, category=p.category, x=p.x, y=p.y
+            )
+            for p in vector_points
+        ],
+        cluster_counts=[
+            ClusterCountBody(category=c.category, count=c.count)
+            for c in cluster_counts
+        ],
+    )
+
+
+# --------------------------------------------------------------------------
+# 管理画面向けエンドポイント（データ更新: /admin/resources/*）
+# --------------------------------------------------------------------------
+# マップから登録済みの地域資源を検索・編集・削除する機能。
+# 全エンドポイントは有効なログインセッションを要求する。
+
+
+class AdminResourceBody(BaseModel):
+    """管理画面向けの地域資源1件分のレスポンス表現。"""
+
+    resource_id: str
+    name: str
+    category: str
+    description: str
+    latitude: float
+    longitude: float
+    municipality: str
+    file_url: str | None
+
+
+class AdminResourceListResponseBody(BaseModel):
+    """`GET /admin/resources`のレスポンスボディ。"""
+
+    resources: list[AdminResourceBody]
+
+
+class AdminResourceUpdateRequestBody(BaseModel):
+    """`PATCH /admin/resources/{resource_id}`のリクエストボディ。
+
+    指定しなかった項目（Noneのまま）は変更しない。
+    """
+
+    name: str | None = Field(default=None, description="名称")
+    category: str | None = Field(default=None, description="カテゴリ")
+    description: str | None = Field(default=None, description="説明文")
+    latitude: float | None = Field(default=None, description="緯度")
+    longitude: float | None = Field(default=None, description="経度")
+    municipality: str | None = Field(default=None, description="市町村名")
+
+
+def _resource_to_admin_body(resource: RegionalResource) -> AdminResourceBody:
+    return AdminResourceBody(
+        resource_id=str(resource.resource_id),
+        name=resource.name,
+        category=resource.category,
+        description=resource.description,
+        latitude=resource.location.latitude,
+        longitude=resource.location.longitude,
+        municipality=resource.municipality,
+        file_url=resource.file_url,
+    )
+
+
+@app.get("/admin/resources", response_model=AdminResourceListResponseBody)
+async def admin_list_resources(
+    min_latitude: float,
+    min_longitude: float,
+    max_latitude: float,
+    max_longitude: float,
+    limit: int = 200,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    resource_repository: ResourceRepository = Depends(get_resource_repository),
+) -> AdminResourceListResponseBody:
+    """管理画面のマップ表示用に、指定した矩形範囲内の地域資源一覧を返す。
+
+    地図の現在の表示範囲（Leaflet等の`getBounds()`が返す
+    南西端・北東端の緯度経度）をクエリパラメータとして渡す想定。
+    """
+    try:
+        resources = search_resources_in_bounds(
+            resource_repository,
+            min_latitude,
+            min_longitude,
+            max_latitude,
+            max_longitude,
+            limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return AdminResourceListResponseBody(
+        resources=[_resource_to_admin_body(r) for r in resources]
+    )
+
+
+@app.patch("/admin/resources/{resource_id}", response_model=AdminResourceBody)
+async def admin_update_resource(
+    resource_id: str,
+    body: AdminResourceUpdateRequestBody,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    resource_repository: ResourceRepository = Depends(get_resource_repository),
+) -> AdminResourceBody:
+    """地域資源の名称・カテゴリ・説明文・位置情報・市町村名を更新する。
+
+    `latitude`/`longitude`はどちらか一方のみの指定は許可しない
+    （両方指定または両方省略のいずれかとする）。
+    """
+    try:
+        target_id = UUID(resource_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="resource_idの形式が不正です") from exc
+
+    if (body.latitude is None) != (body.longitude is None):
+        raise HTTPException(
+            status_code=400, detail="latitudeとlongitudeは両方指定するか両方省略してください"
+        )
+    location = (
+        GeoPoint(latitude=body.latitude, longitude=body.longitude)
+        if body.latitude is not None and body.longitude is not None
+        else None
+    )
+
+    try:
+        updated = update_resource(
+            resource_repository,
+            target_id,
+            body.name,
+            body.category,
+            body.description,
+            location,
+            body.municipality,
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        status = 404 if "見つかりません" in detail else 400
+        raise HTTPException(status_code=status, detail=detail) from exc
+
+    return _resource_to_admin_body(updated)
+
+
+@app.delete(
+    "/admin/resources/{resource_id}", status_code=204, response_model=None
+)
+async def admin_delete_resource(
+    resource_id: str,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    resource_repository: ResourceRepository = Depends(get_resource_repository),
+) -> None:
+    """地域資源を削除する。"""
+    try:
+        target_id = UUID(resource_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="resource_idの形式が不正です") from exc
+
+    try:
+        delete_resource(resource_repository, target_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

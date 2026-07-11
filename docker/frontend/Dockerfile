@@ -21,6 +21,7 @@ COPY frontend/faq.html /usr/share/nginx/html/faq.html
 COPY frontend/contact.html /usr/share/nginx/html/contact.html
 COPY frontend/favicon.svg /usr/share/nginx/html/favicon.svg
 COPY frontend/img/ /usr/share/nginx/html/img/
+COPY frontend/admin/ /usr/share/nginx/html/admin/
 COPY docker/frontend/default.conf.template /etc/nginx/templates/default.conf.template
 
 ENV PORT=8080

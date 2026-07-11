@@ -182,6 +182,7 @@ jobs:
             -var="vacant_sync_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/vacant-sync:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="frontend_image=${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/regional-revitalization/frontend:${{ needs.build-and-push.outputs.image_tag }}" \
             -var="db_password=${{ secrets.TF_VAR_DB_PASSWORD }}" \
+            -var="admin_initial_password=${{ secrets.ADMIN_INITIAL_PASSWORD }}" \
             -var="storage_bucket_name=${{ vars.GCP_BUCKET_NAME }}" \
             -var="places_api_key=${{ secrets.PLACES_API_KEY }}" \
             -var="enable_github_actions_wif=${{ vars.ENABLE_GITHUB_ACTIONS_WIF || 'false' }}" \

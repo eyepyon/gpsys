@@ -85,6 +85,16 @@ variable "allow_unauthenticated" {
   default     = false
 }
 
+variable "admin_initial_username" {
+  description = "管理画面の初回管理者アカウントのログインID"
+  type        = string
+}
+
+variable "admin_initial_password_secret_id" {
+  description = "管理画面の初回管理者アカウントのパスワードを格納したSecret ManagerシークレットのID"
+  type        = string
+}
+
 variable "cors_allowed_origins" {
   description = <<-EOT
     ブラウザから直接APIRunを呼び出すことを許可するオリジンのカンマ区切り一覧

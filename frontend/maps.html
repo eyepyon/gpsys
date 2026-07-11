@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>マップ検索 - いぬきんじょ</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: {
+primary: '#2563eb',
+secondary: '#f97316'
+},
+borderRadius: {
+'none': '0px',
+'sm': '4px',
+DEFAULT: '8px',
+'md': '12px',
+'lg': '16px',
+'xl': '20px',
+'2xl': '24px',
+'3xl': '32px',
+'full': '9999px',
+'button': '8px'
+}
+}
+}
+}
+</script>
+<style>
+:where([class^="ri-"])::before {
+content: "\f3c2";
+}
+.!rounded-button {
+border-radius: 8px !important;
+}
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+}
+.map-pin {
+transition: transform 0.2s ease;
+cursor: pointer;
+}
+.map-pin:hover {
+transform: scale(1.2);
+}
+.popup-enter {
+animation: popupEnter 0.3s ease forwards;
+}
+@keyframes popupEnter {
+from {
+opacity: 0;
+transform: scale(0.9) translateY(10px);
+}
+to {
+opacity: 1;
+transform: scale(1) translateY(0);
+}
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+-webkit-appearance: none;
+margin: 0;
+}
+input[type="number"] {
+-moz-appearance: textfield;
+}
+.custom-checkbox {
+appearance: none;
+width: 20px;
+height: 20px;
+border: 2px solid #d1d5db;
+border-radius: 4px;
+cursor: pointer;
+position: relative;
+transition: all 0.2s;
+}
+.custom-checkbox:checked {
+background-color: #2563eb;
+border-color: #2563eb;
+}
+.custom-checkbox:checked::after {
+content: '';
+position: absolute;
+left: 5px;
+top: 2px;
+width: 6px;
+height: 10px;
+border: solid white;
+border-width: 0 2px 2px 0;
+transform: rotate(45deg);
+}
+</style>
+</head>
+<body class="bg-white">
+
+<header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 h-16">
+<div class="h-full px-6 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<a href="/" data-readdy="true" class="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
+<div class="w-5 h-5 flex items-center justify-center">
+<i class="ri-arrow-left-line text-xl"></i>
+</div>
+<span class="text-sm font-medium">検索に戻る</span>
+</a>
+<span class="font-['Pacifico'] text-2xl text-primary">logo</span>
+</div>
+<button class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
+</div>
+</header>
+
+<div class="fixed top-16 left-0 right-0 bottom-0 flex">
+<aside class="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+<div class="p-6">
+<h2 class="text-xl font-bold text-gray-900 mb-2">物件を絞り込む</h2>
+<p class="text-sm text-gray-600 mb-6">該当物件: 1,234 件</p>
+
+<div class="mb-8">
+<h3 class="text-base font-bold text-gray-900 mb-4">エリア</h3>
+<div class="space-y-3">
+<div class="relative">
+<select class="w-full px-4 py-3 pr-8 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary appearance-none bg-white">
+<option>都道府県を選択</option>
+<option>東京都</option>
+<option>神奈川県</option>
+<option>大阪府</option>
+<option>愛知県</option>
+<option>福岡県</option>
+</select>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center pointer-events-none">
+<i class="ri-arrow-down-s-line text-lg text-gray-400"></i>
+</div>
+</div>
+<div class="relative">
+<select class="w-full px-4 py-3 pr-8 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary appearance-none bg-white">
+<option>市区町村を選択</option>
+<option>渋谷区</option>
+<option>新宿区</option>
+<option>港区</option>
+<option>世田谷区</option>
+<option>目黒区</option>
+</select>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center pointer-events-none">
+<i class="ri-arrow-down-s-line text-lg text-gray-400"></i>
+</div>
+</div>
+<div class="relative">
+<div class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-search-line text-base"></i>
+</div>
+<input type="text" placeholder="駅名で検索" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+</div>
+</div>
+</div>
+
+<div class="mb-8">
+<h3 class="text-base font-bold text-gray-900 mb-4">業種</h3>
+<div class="space-y-3">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input type="checkbox" class="custom-checkbox">
+<div class="w-5 h-5 flex items-center justify-center text-primary">
+<i class="ri-restaurant-line text-base"></i>
+</div>
+<span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">飲食店</span>
+<span class="text-xs text-gray-500">847</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input type="checkbox" class="custom-checkbox">
+<div class="w-5 h-5 flex items-center justify-center text-secondary">
+<i class="ri-scissors-cut-line text-base"></i>
+</div>
+<span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">美容室</span>
+<span class="text-xs text-gray-500">523</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input type="checkbox" class="custom-checkbox">
+<div class="w-5 h-5 flex items-center justify-center text-green-600">
+<i class="ri-hospital-line text-base"></i>
+</div>
+<span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">クリニック</span>
+<span class="text-xs text-gray-500">192</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input type="checkbox" class="custom-checkbox">
+<div class="w-5 h-5 flex items-center justify-center text-purple-600">
+<i class="ri-building-line text-base"></i>
+</div>
+<span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">オフィス</span>
+<span class="text-xs text-gray-500">356</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input type="checkbox" class="custom-checkbox">
+<div class="w-5 h-5 flex items-center justify-center text-pink-600">
+<i class="ri-shopping-bag-line text-base"></i>
+</div>
+<span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">小売店</span>
+<span class="text-xs text-gray-500">734</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input type="checkbox" class="custom-checkbox">
+<div class="w-5 h-5 flex items-center justify-center text-yellow-600">
+<i class="ri-service-line text-base"></i>
+</div>
+<span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">サービス業</span>
+<span class="text-xs text-gray-500">591</span>
+</label>
+<button class="text-sm text-primary hover:text-blue-700 font-medium mt-2">+ 他の業種を表示 (100種類以上)</button>
+</div>
+</div>
+
+<div class="mb-8">
+<h3 class="text-base font-bold text-gray-900 mb-4">家賃</h3>
+<div class="flex items-center gap-3">
+<div class="flex-1">
+<input type="number" placeholder="最小" class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+</div>
+<span class="text-gray-400">〜</span>
+<div class="flex-1">
+<input type="number" placeholder="最大" class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+</div>
+<span class="text-sm text-gray-600 whitespace-nowrap">万円</span>
+</div>
+</div>
+
+<div class="mb-8">
+<h3 class="text-base font-bold text-gray-900 mb-4">広さ</h3>
+<div class="flex items-center gap-3">
+<div class="flex-1">
+<input type="number" placeholder="最小" class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+</div>
+<span class="text-gray-400">〜</span>
+<div class="flex-1">
+<input type="number" placeholder="最大" class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
+</div>
+<span class="text-sm text-gray-600 whitespace-nowrap">㎡</span>
+</div>
+</div>
+
+<div class="flex gap-3">
+<button class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 !rounded-button hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap">条件をクリア</button>
+<button class="flex-1 px-4 py-3 bg-secondary text-white !rounded-button hover:bg-orange-600 transition-colors text-sm font-bold whitespace-nowrap">検索する</button>
+</div>
+</div>
+</aside>
+
+<main class="flex-1 relative">
+<div class="absolute inset-0" style="background-image: url('./img/map_placeholder_1280x720.png'); background-size: cover; background-position: center;">
+<div class="map-pin absolute" style="top: 28%; left: 35%;" data-property="1">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 42%; left: 48%;" data-property="2">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 55%; left: 38%;" data-property="3">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 38%; left: 62%;" data-property="4">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 65%; left: 58%;" data-property="5">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 32%; left: 72%;" data-property="6">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 48%; left: 25%;" data-property="7">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+<div class="map-pin absolute" style="top: 58%; left: 70%;" data-property="8">
+<div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
+<i class="ri-map-pin-fill text-xl"></i>
+</div>
+</div>
+</div>
+
+<div class="absolute bottom-6 right-6 flex flex-col gap-2">
+<button class="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
+<i class="ri-add-line text-2xl text-gray-700"></i>
+</button>
+<button class="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
+<i class="ri-subtract-line text-2xl text-gray-700"></i>
+</button>
+<button class="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors mt-2">
+<i class="ri-focus-3-line text-2xl text-gray-700"></i>
+</button>
+</div>
+
+<div id="property-popup" class="hidden absolute z-40 popup-enter" style="top: 20%; left: 40%;">
+<div class="w-80 bg-white rounded-2xl shadow-2xl overflow-hidden">
+<button class="absolute top-4 right-4 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors z-10" onclick="closePopup()">
+<i class="ri-close-line text-xl text-gray-700"></i>
+</button>
+<img id="popup-image" src="" alt="" class="w-full h-48 object-cover">
+<div class="p-5">
+<div class="flex items-center gap-2 mb-3">
+<span id="popup-badge" class="px-3 py-1 bg-blue-100 text-primary text-xs font-medium rounded-full">飲食店</span>
+</div>
+<h3 id="popup-title" class="text-lg font-bold text-gray-900 mb-4">東京都渋谷区道玄坂 1-23-5</h3>
+<div class="grid grid-cols-2 gap-4 mb-5">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-money-yen-circle-line text-base"></i>
+</div>
+<div>
+<p class="text-xs text-gray-500">家賃</p>
+<p id="popup-rent" class="text-sm font-bold text-gray-900">12.5 万円/月</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 flex items-center justify-center text-gray-400">
+<i class="ri-ruler-line text-base"></i>
+</div>
+<div>
+<p class="text-xs text-gray-500">広さ</p>
+<p id="popup-area" class="text-sm font-bold text-gray-900">45 ㎡</p>
+</div>
+</div>
+</div>
+<button class="w-full py-3 bg-primary text-white font-bold !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap flex items-center justify-center gap-2">
+<span>詳細を見る</span>
+<div class="w-5 h-5 flex items-center justify-center">
+<i class="ri-arrow-right-line text-base"></i>
+</div>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+<script id="map-interaction">
+const properties = {
+1: {
+image: './img/a1922530890e44241513031ea31e00a6.jpg',
+title: '東京都渋谷区道玄坂 1-23-5',
+badge: '飲食店',
+badgeColor: 'bg-blue-100 text-primary',
+rent: '12.5 万円/月',
+area: '45 ㎡'
+},
+2: {
+image: './img/2eb0ed901c24972e09f960f4011625eb.jpg',
+title: '東京都渋谷区神南 2-15-8',
+badge: '美容室',
+badgeColor: 'bg-orange-100 text-secondary',
+rent: '18.0 万円/月',
+area: '52 ㎡'
+},
+3: {
+image: './img/9c3691dc3307b914262abcc0bac10dde.jpg',
+title: '東京都渋谷区宇田川町 3-7-12',
+badge: 'クリニック',
+badgeColor: 'bg-green-100 text-green-600',
+rent: '25.0 万円/月',
+area: '68 ㎡'
+},
+4: {
+image: './img/aea77ecaa834fa38736a403cfa59b427.jpg',
+title: '東京都渋谷区桜丘町 5-18-3',
+badge: 'オフィス',
+badgeColor: 'bg-purple-100 text-purple-600',
+rent: '22.0 万円/月',
+area: '75 ㎡'
+},
+5: {
+image: './img/9c3691dc3307b914262abcc0bac10dde.jpg',
+title: '東京都渋谷区円山町 8-25-1',
+badge: '小売店',
+badgeColor: 'bg-pink-100 text-pink-600',
+rent: '15.5 万円/月',
+area: '38 ㎡'
+},
+6: {
+image: './img/02f51e93ce69331cd09f9f0248dfc9d0.jpg',
+title: '東京都渋谷区神宮前 4-12-7',
+badge: 'サービス業',
+badgeColor: 'bg-yellow-100 text-yellow-600',
+rent: '19.8 万円/月',
+area: '55 ㎡'
+},
+7: {
+image: './img/9c3691dc3307b914262abcc0bac10dde.jpg',
+title: '東京都渋谷区松濤 2-9-14',
+badge: '飲食店',
+badgeColor: 'bg-blue-100 text-primary',
+rent: '16.2 万円/月',
+area: '42 ㎡'
+},
+8: {
+image: './img/2eb0ed901c24972e09f960f4011625eb.jpg',
+title: '東京都渋谷区恵比寿南 1-16-9',
+badge: '小売店',
+badgeColor: 'bg-pink-100 text-pink-600',
+rent: '21.0 万円/月',
+area: '60 ㎡'
+}
+};
+
+document.querySelectorAll('.map-pin').forEach(pin => {
+pin.addEventListener('click', function(e) {
+e.stopPropagation();
+const propertyId = this.getAttribute('data-property');
+const property = properties[propertyId];
+const popup = document.getElementById('property-popup');
+document.getElementById('popup-image').src = property.image;
+document.getElementById('popup-title').textContent = property.title;
+document.getElementById('popup-badge').textContent = property.badge;
+document.getElementById('popup-badge').className = `px-3 py-1 ${property.badgeColor} text-xs font-medium rounded-full`;
+document.getElementById('popup-rent').textContent = property.rent;
+document.getElementById('popup-area').textContent = property.area;
+const rect = this.getBoundingClientRect();
+const mainRect = this.closest('main').getBoundingClientRect();
+popup.style.left = (rect.left - mainRect.left - 140) + 'px';
+popup.style.top = (rect.top - mainRect.top - 380) + 'px';
+popup.classList.remove('hidden');
+});
+});
+
+function closePopup() {
+document.getElementById('property-popup').classList.add('hidden');
+}
+
+document.querySelector('main').addEventListener('click', function(e) {
+if (!e.target.closest('.map-pin') && !e.target.closest('#property-popup')) {
+closePopup();
+}
+});
+</script>
+
+</body>
+</html>

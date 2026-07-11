@@ -169,6 +169,27 @@ variable "app_allow_unauthenticated" {
   default     = false
 }
 
+variable "admin_initial_username" {
+  description = <<-EOT
+    管理画面(inuki/admin)の初回管理者アカウントのログインID。
+    管理ユーザーが1件も存在しない状態でAPIRunが起動した際、この値と
+    admin_initial_passwordを用いて自動的に初回アカウントが作成される。
+    2件目以降の管理ユーザーは、管理画面のユーザー管理ページから作成する。
+  EOT
+  type        = string
+  default     = "admin"
+}
+
+variable "admin_initial_password" {
+  description = <<-EOT
+    管理画面の初回管理者アカウントのパスワード（8文字以上）。値はSecret
+    Manager登録用の一時的な入力としてのみ使用し、実運用ではCI/CD等の
+    シークレットストアから注入すること。
+  EOT
+  type        = string
+  sensitive   = true
+}
+
 variable "app_cors_allowed_origins" {
   description = <<-EOT
     ブラウザから直接APIRunを呼び出すことを許可するオリジンのカンマ区切り

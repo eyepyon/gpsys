@@ -18,6 +18,13 @@ resource "google_secret_manager_secret_iam_member" "app_run_db_secret_access" {
   member    = "serviceAccount:${var.service_account_email}"
 }
 
+# 管理画面の初回管理者パスワードシークレットへの読み取り権限を付与する
+resource "google_secret_manager_secret_iam_member" "app_run_admin_password_secret_access" {
+  secret_id = var.admin_initial_password_secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${var.service_account_email}"
+}
+
 resource "google_cloud_run_v2_service" "app" {
   project  = var.project_id
   name     = var.service_name
@@ -71,6 +78,23 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "INFER_RUN_URL"
         value = var.inference_service_url
+      }
+
+      # 管理画面(/admin/)向けの初回管理者アカウント自動作成用。
+      # 管理ユーザーが1件も存在しない場合のみ、この値でアカウントが作成される。
+      env {
+        name  = "ADMIN_INITIAL_USERNAME"
+        value = var.admin_initial_username
+      }
+
+      env {
+        name = "ADMIN_INITIAL_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret  = var.admin_initial_password_secret_id
+            version = "latest"
+          }
+        }
       }
 
       # 動作確認用フロント画面等、ブラウザから直接呼び出すオリジンを

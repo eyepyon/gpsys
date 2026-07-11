@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理画面ログイン - いぬきんじょ</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="admin-login-wrap admin-card">
+  <h1 style="font-size:1.3rem; margin-top:0;">いぬきんじょ管理画面</h1>
+  <form id="login-form" class="admin-form">
+    <label>APIRunのベースURL</label>
+    <input id="base_url" type="text" placeholder="https://regional-revitalization-api-dev-xxxxx.a.run.app" />
+
+    <label>ユーザー名</label>
+    <input id="username" type="text" autocomplete="username" required />
+
+    <label>パスワード</label>
+    <input id="password" type="password" autocomplete="current-password" required />
+
+    <button type="submit" class="admin-btn" style="margin-top:1.2rem; width:100%;">ログイン</button>
+  </form>
+  <div id="error" class="admin-error" style="display:none;"></div>
+</div>
+
+<script src="common.js"></script>
+<script>
+document.getElementById("base_url").value = getApiBaseUrl();
+
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById("error");
+  errorEl.style.display = "none";
+
+  const baseUrl = document.getElementById("base_url").value.trim();
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  if (!baseUrl) {
+    errorEl.textContent = "APIRunのベースURLを入力してください";
+    errorEl.style.display = "block";
+    return;
+  }
+  setApiBaseUrl(baseUrl);
+
+  try {
+    const res = await fetch(getApiBaseUrl() + "/admin/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `ログインに失敗しました (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    setSessionToken(data.session_token);
+    setDisplayName(data.display_name);
+    window.location.href = "dashboard.html";
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  }
+});
+</script>
+
+</body>
+</html>

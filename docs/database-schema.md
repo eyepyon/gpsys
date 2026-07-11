@@ -134,9 +134,22 @@ ON CONFLICT (place_id) DO UPDATE SET
 
 ```bash
 psql "$DATABASE_URL" -f migrations/001_init_schema.sql
+psql "$DATABASE_URL" -f migrations/002_admin_schema.sql
 ```
 
 Cloud SQLへの接続には、プライベートIPまたはCloud SQL Auth Proxy経由での接続を推奨します（パブリックIPは無効化）。
+
+## 管理画面用スキーマ（002_admin_schema.sql）
+
+管理画面（`frontend/admin/`、APIRunの`/admin/*`エンドポイント）向けに以下を追加します。
+
+| テーブル | 用途 |
+|---|---|
+| `admin_users` | 管理ユーザー（ログインID・パスワードハッシュ・表示名・`role`列（現状`full_admin`固定）） |
+| `admin_sessions` | ログインセッション（ランダムトークンをそのままセッションIDとして使用） |
+| `resource_update_requests` | 利用者からの地域資源データ更新依頼（`status`: pending/approved/rejected） |
+
+また、`regional_resources`・`vacant_property_candidates`に市町村別統計用の`municipality`列（デフォルト空文字列）を追加します。
 
 ## 接続方式
 

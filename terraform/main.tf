@@ -155,22 +155,47 @@ module "cloudrun_inference" {
   labels                        = var.labels
 }
 
+# --- 管理画面(/admin/)の初回管理者パスワード用シークレット ---
+#
+# db_password/places_api_keyと同様に、値自体はSecret Manager登録用の
+# 一時的な入力としてのみ受け渡す（terraform.tfvarsに平文で記載しないこと。
+# 詳細はterraform/README.mdの「機密情報の取り扱い方針」を参照）。
+resource "google_secret_manager_secret" "admin_initial_password" {
+  project   = var.project_id
+  secret_id = "admin-initial-password-${var.environment}"
+
+  replication {
+    auto {}
+  }
+
+  labels = var.labels
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret_version" "admin_initial_password" {
+  secret      = google_secret_manager_secret.admin_initial_password.id
+  secret_data = var.admin_initial_password
+}
+
 # --- cloudrun_app: アプリ本体サービス (APIRun) ---
 module "cloudrun_app" {
   source = "./modules/cloudrun_app"
 
-  project_id              = var.project_id
-  region                  = var.region
-  service_name            = "${var.app_service_name}-${var.environment}"
-  service_account_email   = google_service_account.app_run_sa.email
-  image                   = var.app_image
-  vpc_connector_id        = module.network.connector_id
-  db_connection_secret_id = module.cloudsql.db_connection_secret_id
-  inference_service_url   = module.cloudrun_inference.service_url
-  storage_bucket_name     = module.storage.bucket_name
-  allow_unauthenticated   = var.app_allow_unauthenticated
-  cors_allowed_origins    = var.app_cors_allowed_origins
-  labels                  = var.labels
+  project_id                        = var.project_id
+  region                            = var.region
+  service_name                      = "${var.app_service_name}-${var.environment}"
+  service_account_email             = google_service_account.app_run_sa.email
+  image                             = var.app_image
+  vpc_connector_id                  = module.network.connector_id
+  db_connection_secret_id           = module.cloudsql.db_connection_secret_id
+  inference_service_url             = module.cloudrun_inference.service_url
+  storage_bucket_name               = module.storage.bucket_name
+  allow_unauthenticated             = var.app_allow_unauthenticated
+  cors_allowed_origins              = var.app_cors_allowed_origins
+  admin_initial_username            = var.admin_initial_username
+  admin_initial_password_secret_id  = google_secret_manager_secret.admin_initial_password.secret_id
+  labels                            = var.labels
 }
 
 # --- cloudrun_frontend: 動作確認用フロント画面 (inuki) ---

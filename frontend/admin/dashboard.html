@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ダッシュボード - いぬきんじょ管理画面</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="admin-container">
+  <h1 style="font-size:1.4rem;">ダッシュボード</h1>
+  <p style="color:#6b7280; font-size:0.9rem;">システム全体の状況を確認できます。</p>
+
+  <div id="error" class="admin-error" style="display:none;"></div>
+
+  <div class="admin-card">
+    <div class="admin-grid" id="summary-grid">
+      <div class="admin-stat-box"><div class="value">-</div><div class="label">地域資源</div></div>
+      <div class="admin-stat-box"><div class="value">-</div><div class="label">居抜き物件候補</div></div>
+      <div class="admin-stat-box"><div class="value">-</div><div class="label">相談履歴</div></div>
+      <div class="admin-stat-box"><div class="value">-</div><div class="label">未対応の更新依頼</div></div>
+      <div class="admin-stat-box"><div class="value">-</div><div class="label">管理ユーザー</div></div>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <p style="font-size:0.85rem; color:#6b7280;">
+      「データ更新」ページではマップから登録済みデータの確認・編集ができます。<br>
+      「更新依頼」ページでは利用者からのデータ更新依頼を確認・承認できます。<br>
+      「統計情報」ページでは市町村別・業種別データ数やベクトルDBの分布状況を確認できます。
+    </p>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+requireLogin();
+renderAdminNav("dashboard");
+
+async function load() {
+  const errorEl = document.getElementById("error");
+  try {
+    const res = await adminFetch("/admin/dashboard");
+    if (!res.ok) throw new Error(`取得に失敗しました (HTTP ${res.status})`);
+    const data = await res.json();
+    const boxes = document.querySelectorAll("#summary-grid .admin-stat-box .value");
+    boxes[0].textContent = data.regional_resource_count;
+    boxes[1].textContent = data.vacant_property_count;
+    boxes[2].textContent = data.consultation_log_count;
+    boxes[3].textContent = data.pending_update_request_count;
+    boxes[4].textContent = data.admin_user_count;
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  }
+}
+load();
+</script>
+
+</body>
+</html>

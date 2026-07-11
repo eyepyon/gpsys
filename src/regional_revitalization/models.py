@@ -78,6 +78,9 @@ class RegionalResource:
     embedding: list[float]
     created_at: datetime
     updated_at: datetime
+    # 市町村別統計・管理画面での絞り込みのための列。既存データとの後方互換性の
+    # ため、デフォルトは空文字列（「未設定」を意味する）とする。
+    municipality: str = ""
 
 
 @dataclass(frozen=True)

@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import math
 import struct
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -153,6 +154,36 @@ class ResourceRepository(Protocol):
         """
         ...
 
+    def search_in_bounds(
+        self,
+        min_latitude: float,
+        min_longitude: float,
+        max_latitude: float,
+        max_longitude: float,
+        limit: int,
+    ) -> list[RegionalResource]:
+        """指定した緯度経度の矩形範囲内にある地域資源を返す（管理画面のマップ表示用）。"""
+        ...
+
+    def update(
+        self,
+        resource_id: UUID,
+        name: str | None,
+        category: str | None,
+        description: str | None,
+        location: GeoPoint | None,
+        municipality: str | None,
+    ) -> None:
+        """指定した地域資源の属性を更新する。`None`が渡された項目は変更しない。
+
+        `description`を変更する場合、embeddingもDB側で再生成される想定。
+        """
+        ...
+
+    def delete(self, resource_id: UUID) -> None:
+        """指定した地域資源を削除する。"""
+        ...
+
 
 class InMemoryResourceRepository:
     """テスト用のインメモリ`ResourceRepository`実装。
@@ -254,6 +285,66 @@ class InMemoryResourceRepository:
             if resource.resource_id == resource_id:
                 return resource
         return None
+
+    def search_in_bounds(
+        self,
+        min_latitude: float,
+        min_longitude: float,
+        max_latitude: float,
+        max_longitude: float,
+        limit: int,
+    ) -> list[RegionalResource]:
+        """緯度経度の矩形範囲内にある地域資源を、内部リストの順序で最大`limit`件返す。"""
+        matched = [
+            resource
+            for resource in self._resources
+            if min_latitude <= resource.location.latitude <= max_latitude
+            and min_longitude <= resource.location.longitude <= max_longitude
+        ]
+        return matched[:limit]
+
+    def update(
+        self,
+        resource_id: UUID,
+        name: str | None,
+        category: str | None,
+        description: str | None,
+        location: GeoPoint | None,
+        municipality: str | None,
+    ) -> None:
+        """`resource_id`に一致する地域資源の属性を内部リスト上で更新する。
+
+        Raises:
+            ValueError: 対象の`resource_id`が見つからない場合。
+        """
+        for index, resource in enumerate(self._resources):
+            if resource.resource_id == resource_id:
+                self._resources[index] = RegionalResource(
+                    resource_id=resource.resource_id,
+                    name=name if name is not None else resource.name,
+                    category=category if category is not None else resource.category,
+                    description=(
+                        description if description is not None else resource.description
+                    ),
+                    location=location if location is not None else resource.location,
+                    file_url=resource.file_url,
+                    embedding=resource.embedding,
+                    created_at=resource.created_at,
+                    updated_at=datetime.now(),
+                    municipality=(
+                        municipality if municipality is not None else resource.municipality
+                    ),
+                )
+                return
+        raise ValueError(f"地域資源が見つかりません: {resource_id}")
+
+    def delete(self, resource_id: UUID) -> None:
+        """`resource_id`に一致する地域資源を内部リストから削除する。"""
+        self._resources = [
+            resource
+            for resource in self._resources
+            if resource.resource_id != resource_id
+        ]
 
     def __len__(self) -> int:
         """保持している地域資源の件数を返す（テストでの副作用確認に使用）。"""
