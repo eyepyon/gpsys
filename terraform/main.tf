@@ -96,15 +96,17 @@ module "cloudsql" {
 }
 
 # --- storage: 地域資源ファイル保存用バケット ---
+#
+# 【重要】本バケットはTerraformのtfstate保存先バケットと共用する
+# （`resources/`プレフィックス配下を地域資源ファイル用に使用する）。
+# バケット自体はTerraform管理外で事前作成されたものを参照するのみであり、
+# 新規作成は行わない（詳細はmodules/storage/main.tf、
+# docs/deployment-guide.mdの初回セットアップ手順を参照）。
 module "storage" {
   source = "./modules/storage"
 
-  project_id  = var.project_id
-  region      = var.region
-  bucket_name = var.storage_bucket_name
-  labels      = var.labels
-
-  depends_on = [google_project_service.apis]
+  bucket_name                   = var.storage_bucket_name
+  app_run_service_account_email = google_service_account.app_run_sa.email
 }
 
 # --- APIRunの実行用サービスアカウント ---

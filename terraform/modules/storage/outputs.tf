@@ -1,11 +1,11 @@
 # storageモジュール出力値
 
 output "bucket_name" {
-  description = "作成したCloud Storageバケット名"
-  value       = google_storage_bucket.resources.name
+  description = "地域資源ファイル保存用Cloud Storageバケット名（tfstateと共用、resources/プレフィックス配下を使用）"
+  value       = data.google_storage_bucket.resources.name
 }
 
 output "bucket_url" {
-  description = "作成したCloud Storageバケットの gs:// 形式URL"
-  value       = google_storage_bucket.resources.url
+  description = "地域資源ファイル保存用Cloud Storageバケットの gs:// 形式URL"
+  value       = data.google_storage_bucket.resources.url
 }

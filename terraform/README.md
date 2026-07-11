@@ -80,7 +80,7 @@ terraform/
 | `db_name` | - | `regional_revitalization` | アプリケーション用DB名 |
 | `db_user` | - | `app_user` | アプリケーション用DBユーザー名 |
 | `db_password` | ○（機密） | - | アプリケーション用DBユーザーのパスワード |
-| `storage_bucket_name` | ○ | - | 地域資源ファイル保存用バケット名（グローバル一意） |
+| `storage_bucket_name` | ○ | - | tfstateと共用するバケット名（グローバル一意、`resources/`プレフィックス配下を地域資源ファイル用に使用） |
 | `places_api_key` | ○（機密） | - | Google Maps Platform Places APIキー |
 | `vacant_sync_schedule` | - | `0 3 * * *` | 同期サービスの実行スケジュール(unix-cron) |
 | `vacant_sync_time_zone` | - | `Etc/UTC` | スケジュールのタイムゾーン |
@@ -134,8 +134,9 @@ design.mdの方針（GPU L4はus-central1でホスト）に合わせ、デフォ
 - `modules/cloudsql`: Cloud SQL for PostgreSQLインスタンス（プライベートIPのみ、
   `google_ml_integration`拡張有効化フラグ）、DB/ユーザー作成、
   DB接続情報のSecret Manager登録
-- `modules/storage`: 非公開Cloud Storageバケット（`uniform_bucket_level_access`,
-  `public_access_prevention = "enforced"`）
+- `modules/storage`: tfstateと共用の非公開Cloud Storageバケット（Terraform管理外で
+  事前作成、`resources/`プレフィックス配下）への、APIRun実行用サービスアカウント
+  向けIAM条件付きアクセス権限（`resources/`プレフィックス限定、`roles/storage.objectAdmin`）
 - `modules/cloudrun_app`: APIRun（アプリ本体サービス）のCloud Runサービス
 - `modules/cloudrun_inference`: InferRun（推論サービス、GPU L4、内部限定公開）の
   Cloud Runサービス
@@ -155,8 +156,13 @@ design.mdの方針（GPU L4はus-central1でホスト）に合わせ、デフォ
 構築している。GCPへの認証はサービスアカウントキー（JSON）を使わず、
 Workload Identity Federation（キーレス認証）で行う。
 
-初回セットアップ手順（tfstate用バケットの作成、WIFの有効化、GitHub Secretsの
-設定）の詳細は`docs/deployment-guide.md`を参照すること。
+`deploy.yml`内では、プロジェクトID・デプロイ用サービスアカウント・バケット名等、
+値自体に秘匿性の無い識別子はリポジトリの Variables（`vars.*`）から、
+DBパスワード・Places APIキー・Workload Identityプロバイダ名等の機密値は
+Secrets（`secrets.*`）から参照する。
+
+初回セットアップ手順（tfstateと地域資源ファイル共用バケットの作成、WIFの有効化、
+GitHub Secrets/Variablesの設定）の詳細は`docs/deployment-guide.md`を参照すること。
 
 ## コーディング規約
 

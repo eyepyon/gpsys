@@ -36,7 +36,10 @@ db_name          = "regional_revitalization"
 db_user          = "app_user"
 # db_password はサンプルに含めない。TF_VAR_db_password 環境変数等で渡すこと。
 
-storage_bucket_name = "your-gcp-project-id-regional-revitalization-resources"
+# tfstate保存先バケット（terraform init時の-backend-config="bucket=..."）と
+# 同じバケット名を指定する。tfstateは`terraform/state/`、地域資源ファイルは
+# `resources/`のプレフィックス（フォルダ相当）で用途を分離して1つのバケットを共用する。
+storage_bucket_name = "your-gcp-project-id-regional-revitalization"
 
 # places_api_key はサンプルに含めない。TF_VAR_places_api_key 環境変数等で渡すこと。
 
