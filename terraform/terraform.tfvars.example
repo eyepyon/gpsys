@@ -46,3 +46,12 @@ vacant_sync_time_zone = "Etc/UTC"
 labels = {
   app = "regional-revitalization"
 }
+
+artifact_registry_repository_id = "regional-revitalization"
+
+# GitHub ActionsからのCI/CDデプロイを有効化する場合はtrueにし、
+# github_repository に "org-name/repo-name" 形式でリポジトリ名を指定する。
+# 【注記】初回はfalseのまま人間の管理者権限で terraform apply し、
+# デプロイ用サービスアカウント等を作成した後にtrueへ切り替えること。
+enable_github_actions_wif = false
+github_repository         = "your-org/your-repo"

@@ -33,6 +33,39 @@ resource "google_project_service" "apis" {
   disable_on_destroy         = false
 }
 
+# --- artifact_registry: コンテナイメージ格納用リポジトリ ---
+module "artifact_registry" {
+  source = "./modules/artifact_registry"
+
+  project_id    = var.project_id
+  region        = var.region
+  repository_id = var.artifact_registry_repository_id
+  labels        = var.labels
+
+  depends_on = [google_project_service.apis]
+}
+
+# --- github_actions_wif: GitHub ActionsからのキーレスCI/CDデプロイ用WIF ---
+#
+# 【重要・初回適用に関する注記】本モジュールが作成するデプロイ用サービス
+# アカウント自体をGitHub Actionsが利用してTerraformを適用する構成のため、
+# 「初回」はGCPプロジェクトへの十分な権限を持つ人間の管理者が
+# ローカル環境（または信頼できるCI環境）から`terraform apply`を実行し、
+# WIFプールとデプロイ用サービスアカウントを作成する必要がある。
+# 2回目以降は、GitHub Actionsのワークフローがこのデプロイ用サービス
+# アカウントになりすまして（impersonate）Terraformを適用できる。
+# 詳細はdocs/deployment-guide.mdまたはterraform/README.mdを参照。
+module "github_actions_wif" {
+  count = var.enable_github_actions_wif ? 1 : 0
+
+  source = "./modules/github_actions_wif"
+
+  project_id        = var.project_id
+  github_repository = var.github_repository
+
+  depends_on = [google_project_service.apis]
+}
+
 # --- network: VPCコネクタ + Private Services Access ---
 module "network" {
   source = "./modules/network"

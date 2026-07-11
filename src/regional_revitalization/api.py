@@ -34,6 +34,10 @@ from __future__ import annotations
 
 import base64
 import binascii
+import logging
+import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -55,7 +59,19 @@ from regional_revitalization.vacant_property import (
     search_vacant_properties,
 )
 
-app = FastAPI(title="地方創生支援システム アプリ本体サービス (APIRun)")
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """アプリ起動時に実運用実装への差し替えを行うライフスパンハンドラ。"""
+    await _bootstrap_production_dependencies()
+    yield
+
+
+app = FastAPI(
+    title="地方創生支援システム アプリ本体サービス (APIRun)", lifespan=_lifespan
+)
 
 
 # --------------------------------------------------------------------------
@@ -122,6 +138,66 @@ def set_vacant_property_repository(repository: VacantPropertyRepository) -> None
     """
     global _vacant_property_repository
     _vacant_property_repository = repository
+
+
+# --------------------------------------------------------------------------
+# 起動時ブートストラップ（実運用実装への差し替え）
+# --------------------------------------------------------------------------
+# Cloud Run実行時は、環境変数`DATABASE_URL`・`GCS_BUCKET_NAME`が
+# Terraform（Secret Manager経由）で設定されるため、それらが存在する場合のみ
+# インメモリ実装からCloud SQL/Cloud Storage実装へ差し替える。
+# 環境変数が未設定のローカル開発・単体テストではデフォルトのインメモリ実装の
+# ままとし、実DB/実バケットへの接続を試行しない。
+# 本関数は`_lifespan`（FastAPIのlifespanイベントハンドラ）から呼び出される。
+
+
+async def _bootstrap_production_dependencies() -> None:
+    """環境変数に応じて、共有インスタンスを実運用実装へ差し替える。"""
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        try:
+            import asyncpg
+
+            from regional_revitalization.postgres_repository import (
+                PostgresResourceRepository,
+            )
+            from regional_revitalization.postgres_vacant_property_repository import (
+                PostgresVacantPropertyRepository,
+            )
+
+            pool = await asyncpg.create_pool(database_url)
+            set_resource_repository(PostgresResourceRepository(pool))
+            set_vacant_property_repository(
+                PostgresVacantPropertyRepository(pool)
+            )
+            logger.info("Cloud SQL for PostgreSQLへの接続を初期化しました")
+        except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
+            logger.exception("Cloud SQLへの接続初期化に失敗しました")
+            raise
+
+    bucket_name = os.environ.get("GCS_BUCKET_NAME")
+    if bucket_name:
+        try:
+            from regional_revitalization.storage import GcsStorageClient
+
+            set_storage_client(GcsStorageClient(bucket_name=bucket_name))
+            logger.info("Cloud Storageクライアントを初期化しました: bucket=%s", bucket_name)
+        except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
+            logger.exception("Cloud Storageクライアントの初期化に失敗しました")
+            raise
+
+    inference_url = os.environ.get("INFERENCE_SERVICE_URL")
+    if inference_url:
+        try:
+            from regional_revitalization.inference import HttpInferenceClient
+
+            set_inference_client(HttpInferenceClient(base_url=inference_url))
+            logger.info(
+                "推論サービスクライアントを初期化しました: url=%s", inference_url
+            )
+        except Exception:  # noqa: BLE001 - 起動失敗の原因をログに残し例外を再送する
+            logger.exception("推論サービスクライアントの初期化に失敗しました")
+            raise
 
 
 # --------------------------------------------------------------------------

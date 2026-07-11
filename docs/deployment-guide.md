@@ -1,8 +1,15 @@
-# デプロイガイド（Terraform / GCP）
+# デプロイガイド（Terraform / GCP / GitHub Actions）
 
-本ドキュメントは、Terraformを用いてGCPインフラを構築し、本システムをデプロイする手順をまとめたものです。Terraformコードの実体は`terraform/`ディレクトリです。
+本ドキュメントは、Terraformを用いてGCPインフラを構築し、GitHub ActionsによるCI/CDパイプラインで本システムをデプロイする手順をまとめたものです。Terraformコードの実体は`terraform/`ディレクトリ、GitHub Actionsワークフローは`.github/workflows/`ディレクトリ、Dockerfileは`docker/`ディレクトリです。
 
-> **重要な注記**: `terraform/`配下のコードは、Terraform CLIが利用できない開発環境で作成されました。`terraform init`/`validate`/`plan`/`apply`による実行検証は未実施です。コードレビューレベルでの構文・構造の妥当性確認のみ済んでいます。適用前に必ず`terraform validate`・`terraform plan`で内容を確認してください。
+> **重要な注記**: `terraform/`配下のコードおよび`docker/`配下のDockerfileは、Terraform CLI・Docker CLIが利用できない開発環境で作成されました。`terraform init`/`validate`/`plan`/`apply`、および`docker build`による実行検証は未実施です。コードレビューレベルでの構文・構造の妥当性確認のみ済んでいます。適用前に必ず`terraform validate`・`terraform plan`、および`docker build`のローカル実行で内容を確認してください。GitHub Actions上のCIジョブ（`ci.yml`）でも自動検証されます。
+
+## デプロイ方式の全体像
+
+本システムは2段階のデプロイ方式を取ります。
+
+1. **初回セットアップ（人間の管理者が実行）**: GCPプロジェクトの初期構築、Terraformのtfstate保存用GCSバケットの作成、GitHub ActionsからのWorkload Identity Federation（WIF）設定。これらは「GitHub Actionsがまだ認証情報を持っていない」段階のため、人間が十分な権限を持つ認証情報でローカルから実行する必要があります。
+2. **継続的デプロイ（GitHub Actionsが実行）**: 初回セットアップ完了後は、`main`ブランチへのpush（マージ）をトリガーに、GitHub Actionsが自動でコンテナイメージのビルド・プッシュとTerraform適用を行います。
 
 ## 前提条件
 
@@ -24,7 +31,7 @@
 
 ```
 terraform/
-├── versions.tf                 # Terraform/プロバイダのバージョン制約
+├── versions.tf                 # Terraform/プロバイダのバージョン制約、GCSリモートバックエンド設定
 ├── variables.tf                 # ルート構成の入力変数
 ├── main.tf                      # 各モジュールの呼び出し、API有効化
 ├── outputs.tf                   # ルート構成の出力値
@@ -36,7 +43,18 @@ terraform/
     ├── cloudrun_app/                          # アプリ本体サービス(APIRun)
     ├── cloudrun_inference/                    # 推論サービス(InferRun, GPU L4)
     ├── cloudrun_jobs_vacant_property_sync/    # 居抜き物件同期サービス(Cloud Run Jobs)
-    └── scheduler/                             # Cloud Scheduler(定期トリガー)
+    ├── scheduler/                             # Cloud Scheduler(定期トリガー)
+    ├── artifact_registry/                     # コンテナイメージ格納用リポジトリ
+    └── github_actions_wif/                    # GitHub ActionsからのWorkload Identity連携
+
+docker/
+├── api/Dockerfile             # APIRun用コンテナイメージ
+├── infer/Dockerfile           # InferRun用コンテナイメージ
+└── vacant_sync/Dockerfile     # 居抜き物件同期サービス用コンテナイメージ
+
+.github/workflows/
+├── ci.yml                     # プルリクエスト・push時のテスト・構文検証（再利用可能ワークフロー）
+└── deploy.yml                 # mainブランチへのpush時のビルド・デプロイ
 ```
 
 ## 必要な変数一覧
@@ -65,17 +83,53 @@ terraform/
 | `vacant_sync_time_zone` | - | `Etc/UTC` | スケジュールのタイムゾーン |
 | `labels` | - | `{app = "regional-revitalization"}` | 全リソース共通ラベル |
 
-## デプロイ手順
+## 初回セットアップ手順（人間の管理者がローカルから実行）
 
-### 1. コンテナイメージのビルド・プッシュ
+GitHub Actionsはまだ認証情報を持っていないため、以下は`gcloud auth login`等で認証済みの、GCPプロジェクトへの十分な権限（プロジェクト編集者以上を推奨）を持つ人間の管理者がローカル環境から実行します。
 
-APIRun・InferRun・居抜き物件同期サービスの3つのコンテナイメージをビルドし、Artifact Registry等にプッシュします（Dockerfileは現時点で未整備のため、各サービスのエントリポイント（`api.py`, `infer_run_api.py`, `vacant_property_sync_job.py`）を起動するコンテナイメージを別途用意してください）。
+### 1. tfstate用GCSバケットの作成
 
-- APIRun: `uvicorn regional_revitalization.api:app`を起動するイメージ
-- InferRun: `uvicorn regional_revitalization.infer_run_api:app`を起動するイメージ（Gemma 4 12B QATモデルの重み・推論ライブラリを含む）
-- 居抜き物件同期サービス: `python -m regional_revitalization.vacant_property_sync_job`を実行するイメージ
+Terraformの状態ファイル（tfstate）を保存するリモートバックエンド用バケットを、Terraform管理外で先に作成します（バケット自体をTerraformで管理すると循環依存になるため）。
 
-### 2. 変数の設定
+```bash
+gcloud storage buckets create gs://<your-project-id>-regional-revitalization-tfstate \
+  --project=<your-project-id> \
+  --location=us-central1 \
+  --uniform-bucket-level-access
+
+# バージョニングを有効化し、誤ってstateを上書きした場合に復元できるようにする
+gcloud storage buckets update gs://<your-project-id>-regional-revitalization-tfstate --versioning
+```
+
+### 2. コンテナイメージのビルド・プッシュ（初回のみ手動）
+
+Terraformの初回適用時にはコンテナイメージが必要なため、`main.tf`が参照するArtifact Registryリポジトリを先に作成し、初回イメージを手動でプッシュします。段取りは以下の通りです。
+
+```bash
+# Artifact Registryリポジトリのみを先に作成する（--target で対象を絞る）
+cd terraform
+terraform init -backend-config="bucket=<your-project-id>-regional-revitalization-tfstate"
+terraform apply -target=module.artifact_registry -var="project_id=<your-project-id>" \
+  -var="app_image=placeholder" -var="inference_image=placeholder" \
+  -var="vacant_sync_image=placeholder" -var="storage_bucket_name=<bucket-name>" \
+  -var="db_password=$TF_VAR_db_password" -var="places_api_key=$TF_VAR_places_api_key"
+
+# 認証設定
+gcloud auth configure-docker us-central1-docker.pkg.dev
+
+# 各イメージをビルド・プッシュする（リポジトリルートで実行）
+cd ..
+docker build -f docker/api/Dockerfile -t us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/api:latest .
+docker push us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/api:latest
+
+docker build -f docker/infer/Dockerfile -t us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/infer:latest .
+docker push us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/infer:latest
+
+docker build -f docker/vacant_sync/Dockerfile -t us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/vacant-sync:latest .
+docker push us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/vacant-sync:latest
+```
+
+### 3. 変数の設定とTerraformのフル適用
 
 `terraform/terraform.tfvars.example`を参考に、機密情報以外の変数を設定します。**機密情報（`db_password`, `places_api_key`）は`terraform.tfvars`に平文で記載しないでください。**
 
@@ -84,13 +138,16 @@ export TF_VAR_db_password="..."
 export TF_VAR_places_api_key="..."
 ```
 
-### 3. Terraformの初期化・検証・適用
-
 ```bash
 cd terraform
-terraform init
 terraform validate
-terraform plan -out=tfplan
+terraform plan \
+  -var="project_id=<your-project-id>" \
+  -var="app_image=us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/api:latest" \
+  -var="inference_image=us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/infer:latest" \
+  -var="vacant_sync_image=us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/vacant-sync:latest" \
+  -var="storage_bucket_name=<bucket-name>" \
+  -out=tfplan
 terraform apply tfplan
 ```
 
@@ -102,11 +159,61 @@ Cloud SQLインスタンス作成後、`migrations/001_init_schema.sql`を適用
 psql "$DATABASE_URL" -f ../migrations/001_init_schema.sql
 ```
 
-### 5. 動作確認
+### 5. GitHub ActionsからのWorkload Identity Federationを有効化する
+
+初回のフル適用が完了したら、`enable_github_actions_wif = true`・`github_repository = "org-name/repo-name"`を指定して再度`terraform apply`し、WIFプール・プロバイダ・デプロイ用サービスアカウントを作成します。
+
+```bash
+terraform apply \
+  -var="project_id=<your-project-id>" \
+  -var="app_image=us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/api:latest" \
+  -var="inference_image=us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/infer:latest" \
+  -var="vacant_sync_image=us-central1-docker.pkg.dev/<your-project-id>/regional-revitalization/vacant-sync:latest" \
+  -var="storage_bucket_name=<bucket-name>" \
+  -var="enable_github_actions_wif=true" \
+  -var="github_repository=<org-name>/<repo-name>"
+```
+
+適用後、以下の出力値を確認します。
+
+```bash
+terraform output github_actions_workload_identity_provider
+terraform output github_actions_deployer_service_account_email
+```
+
+### 6. GitHub Secretsの設定
+
+GitHubリポジトリの `Settings > Secrets and variables > Actions` で以下のSecretsを登録します。
+
+| Secret名 | 値 | 用途 |
+|---|---|---|
+| `GCP_PROJECT_ID` | GCPプロジェクトID | `deploy.yml`内の各コマンドで使用 |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | 手順5の`github_actions_workload_identity_provider`出力値 | `google-github-actions/auth`アクションの認証設定 |
+| `GCP_DEPLOYER_SERVICE_ACCOUNT` | 手順5の`github_actions_deployer_service_account_email`出力値 | 同上（なりすまし対象サービスアカウント） |
+| `GCP_TFSTATE_BUCKET` | 手順1で作成したバケット名 | `terraform init`のバックエンド設定 |
+| `GCP_STORAGE_BUCKET_NAME` | 地域資源ファイル保存用バケット名 | `terraform apply`の`storage_bucket_name`変数 |
+| `TF_VAR_DB_PASSWORD` | Cloud SQLアプリ用DBパスワード | `terraform apply`の`db_password`変数 |
+| `PLACES_API_KEY` | Google Maps Platform Places APIキー | `terraform apply`の`places_api_key`変数 |
+
+サービスアカウントキー（JSON）は一切登録しません。GitHub ActionsはWorkload Identity Federationにより、実行時に発行される短命なOIDCトークンをGCPの短命な認証情報に交換して認証します。
+
+### 7. 動作確認
 
 - APIRunのヘルスチェック（例: `GET /docs`でFastAPIのSwagger UIが表示されることを確認）
 - `POST /consultations`・`POST /resources`・`POST /vacant-properties/search`の簡易リクエスト
 - Cloud Schedulerが居抜き物件同期サービス（Cloud Run Jobs）を定期実行することの確認
+
+## 継続的デプロイ（GitHub Actions）
+
+初回セットアップ完了後は、`main`ブランチへのpush（`src/`, `terraform/`, `migrations/`, `docker/`, `pyproject.toml`の変更を含む場合）をトリガーに、`.github/workflows/deploy.yml`が以下を自動実行します。
+
+1. **デプロイ前テスト**（`ci.yml`を再利用ワークフローとして呼び出し）: `pytest`によるテスト、`terraform validate`、Dockerイメージのビルド確認（プッシュなし）
+2. **コンテナイメージのビルド・プッシュ**: APIRun・InferRun・居抜き物件同期サービスの3イメージを、コミットSHAをタグとしてビルドし、Artifact Registryへプッシュ（`latest`タグも同時更新）
+3. **Terraform適用**: 新しいイメージタグを`app_image`/`inference_image`/`vacant_sync_image`変数に渡し、`terraform plan`→`terraform apply`を実行
+
+手動実行したい場合は、GitHub Actionsの「Actions」タブから`Deploy`ワークフローを選び、`Run workflow`（`workflow_dispatch`）で任意のブランチ・コミットに対して実行できます。
+
+**プルリクエスト作成時**は`ci.yml`のみが実行され、実際のデプロイは行われません（`main`ブランチへのpush時のみ`deploy.yml`が動作します）。
 
 ## 機密情報の取り扱い方針
 
@@ -129,6 +236,8 @@ psql "$DATABASE_URL" -f ../migrations/001_init_schema.sql
 | `modules/cloudrun_inference` | InferRun（推論サービス、GPU L4、内部限定公開）のCloud Runサービス |
 | `modules/cloudrun_jobs_vacant_property_sync` | 居抜き物件同期サービスのCloud Run Jobs、Places APIキーのSecret Manager登録・アクセス制御 |
 | `modules/scheduler` | Cloud Schedulerによる定期トリガー（居抜き物件同期サービス起動） |
+| `modules/artifact_registry` | コンテナイメージ格納用のArtifact Registry（Docker形式）リポジトリ |
+| `modules/github_actions_wif` | GitHub ActionsからのWorkload Identity連携（プール・プロバイダ）、デプロイ用サービスアカウントと最小権限ロール付与（`enable_github_actions_wif=true`の場合のみ作成） |
 
 ## リージョンについて
 
@@ -143,3 +252,15 @@ psql "$DATABASE_URL" -f ../migrations/001_init_schema.sql
 - [ ] Cloud Storageバケットが非公開設定（`public_access_prevention = "enforced"`）になっていることを確認した
 - [ ] Cloud Schedulerのスケジュール（`vacant_sync_schedule`）が、監視対象place_id数とAPIレート制限を踏まえて30日以内に全件リフレッシュされる頻度になっていることを確認した
 - [ ] tfstateの保存先（リモートバックエンド）とアクセス権限を確認した
+- [ ] GitHub Actions Secretsにサービスアカウントキー（JSON）を登録していないこと（WIFのみで認証していること）を確認した
+- [ ] GitHub Actionsのデプロイ用サービスアカウント（`github_actions_wif`モジュール）に、必要以上の権限（Owner/Editor等）が付与されていないことを確認した
+- [ ] `attribute_condition`により、Workload Identity連携が想定するGitHubリポジトリ（`github_repository`変数）に限定されていることを確認した
+
+## GitHub Actionsに関するトラブルシューティング
+
+| 症状 | 想定原因 | 対処 |
+|---|---|---|
+| `terraform-apply`ジョブで`Error 403: Permission denied` | デプロイ用サービスアカウントに必要なロールが不足している | `terraform/modules/github_actions_wif/main.tf`の`local.deployer_roles`に必要なロールを追加し再適用する |
+| `google-github-actions/auth`ステップで認証失敗 | `GCP_WORKLOAD_IDENTITY_PROVIDER`・`GCP_DEPLOYER_SERVICE_ACCOUNT`のSecretsが誤っている、または`attribute_condition`のリポジトリ名が不一致 | Secretsの値を`terraform output`の値と再度突き合わせる。`github_repository`変数がリポジトリ名（`org-name/repo-name`）と完全一致しているか確認する |
+| `terraform init`で`Error: Backend configuration changed` | tfstateバケット名の変更、またはローカルとCIで異なるバックエンド設定を使っている | `-reconfigure`オプション付きで`terraform init`を実行するか、バックエンド設定を統一する |
+| Dockerイメージのビルドが失敗する | `pyproject.toml`の依存関係変更がDockerfileのキャッシュと整合していない | `docker/*/Dockerfile`の`pip install`対象を確認し、必要なエクストラ（`api`, `postgres`, `gcs`等）が指定されているか確認する |

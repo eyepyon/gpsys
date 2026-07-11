@@ -23,13 +23,18 @@ terraform {
     }
   }
 
-  # 本番運用時はTerraformの状態ファイルをGCSバケット等のリモートバックエンドに
-  # 保存することを強く推奨する（ローカルのtfstateには機密値の断片が残るため）。
-  # 例:
-  # backend "gcs" {
-  #   bucket = "regional-revitalization-tfstate"
-  #   prefix = "terraform/state"
-  # }
+  # Terraformの状態ファイルはGCSバケット（リモートバックエンド）に保存する。
+  # ローカルのtfstateには機密値の断片が残るため、GitHub Actions等のCI/CD環境
+  # から実行する場合はリモートバックエンドが必須となる。
+  #
+  # バケット名はここでは指定せず（部分バックエンド構成）、
+  # `terraform init -backend-config="bucket=<バケット名>"`で実行時に指定する。
+  # ローカル開発でstateファイルを共有する必要がない場合は、
+  # `terraform init -backend=false`でバックエンド未接続の構文検証のみ行うか、
+  # `-backend-config`を省略してローカルファイルとして初期化してもよい。
+  backend "gcs" {
+    prefix = "terraform/state"
+  }
 }
 
 provider "google" {

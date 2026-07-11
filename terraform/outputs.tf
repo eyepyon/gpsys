@@ -34,3 +34,18 @@ output "db_connection_secret_name" {
   description = "DB接続情報を格納したSecret Managerシークレットの完全なリソース名"
   value       = module.cloudsql.db_connection_secret_name
 }
+
+output "artifact_registry_repository_url" {
+  description = "コンテナイメージのプッシュ/プル先となるArtifact RegistryリポジトリURL"
+  value       = module.artifact_registry.repository_url
+}
+
+output "github_actions_workload_identity_provider" {
+  description = "GitHub Actionsの`google-github-actions/auth`アクションに設定するWorkload Identityプロバイダの完全なリソース名（enable_github_actions_wif=trueの場合のみ値を持つ）"
+  value       = var.enable_github_actions_wif ? module.github_actions_wif[0].workload_identity_provider : null
+}
+
+output "github_actions_deployer_service_account_email" {
+  description = "GitHub Actionsがなりすます(impersonate)デプロイ用サービスアカウントのメールアドレス（enable_github_actions_wif=trueの場合のみ値を持つ）"
+  value       = var.enable_github_actions_wif ? module.github_actions_wif[0].deployer_service_account_email : null
+}

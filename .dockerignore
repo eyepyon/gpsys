@@ -1,0 +1,15 @@
+.git
+.github
+.kiro
+.agents
+docs
+terraform
+tests
+.pytest_cache
+.hypothesis
+__pycache__
+*.pyc
+*.egg-info
+.venv
+venv
+.env

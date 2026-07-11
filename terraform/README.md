@@ -136,6 +136,21 @@ design.mdの方針（GPU L4はus-central1でホスト）に合わせ、デフォ
 - `modules/cloudrun_jobs_vacant_property_sync`: 居抜き物件同期サービスの
   Cloud Run Jobs、Places APIキーのSecret Manager登録・アクセス制御
 - `modules/scheduler`: Cloud Schedulerによる定期トリガー（居抜き物件同期サービス起動）
+- `modules/artifact_registry`: コンテナイメージ格納用のArtifact Registry
+  （Docker形式）リポジトリ
+- `modules/github_actions_wif`: GitHub ActionsからのWorkload Identity連携
+  （プール・プロバイダ）、デプロイ用サービスアカウントと最小権限ロール付与
+  （`enable_github_actions_wif=true`の場合のみ作成）
+
+## GitHub ActionsによるCI/CD
+
+本リポジトリは`.github/workflows/ci.yml`（テスト・構文検証）と
+`.github/workflows/deploy.yml`（ビルド・デプロイ）を用いてCI/CDパイプラインを
+構築している。GCPへの認証はサービスアカウントキー（JSON）を使わず、
+Workload Identity Federation（キーレス認証）で行う。
+
+初回セットアップ手順（tfstate用バケットの作成、WIFの有効化、GitHub Secretsの
+設定）の詳細は`docs/deployment-guide.md`を参照すること。
 
 ## コーディング規約
 

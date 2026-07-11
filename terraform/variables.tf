@@ -129,3 +129,21 @@ variable "labels" {
     "app" = "regional-revitalization"
   }
 }
+
+variable "artifact_registry_repository_id" {
+  description = "コンテナイメージを格納するArtifact Registryリポジトリ名"
+  type        = string
+  default     = "regional-revitalization"
+}
+
+variable "enable_github_actions_wif" {
+  description = "GitHub Actions用のWorkload Identity連携（プール・プロバイダ・デプロイ用サービスアカウント）を作成するかどうか。初回はfalseで適用し、人間の管理者権限で作成した後にtrueへ切り替える運用を想定する"
+  type        = bool
+  default     = false
+}
+
+variable "github_repository" {
+  description = "GitHub ActionsからのWIF認証を許可するGitHubリポジトリ（\"org-name/repo-name\"形式）。enable_github_actions_wif=trueの場合に使用する"
+  type        = string
+  default     = ""
+}
