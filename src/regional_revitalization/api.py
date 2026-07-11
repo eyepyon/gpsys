@@ -37,6 +37,7 @@ import binascii
 import json
 import logging
 import os
+from pathlib import Path
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -328,7 +329,7 @@ async def _bootstrap_production_dependencies() -> None:
                 pool = await asyncpg.create_pool(**db_connection)
             else:
                 pool = await asyncpg.create_pool(database_url)
-            await _ensure_admin_schema(pool)
+            await _apply_database_migrations(pool)
             set_resource_repository(PostgresResourceRepository(pool))
             set_vacant_property_repository(
                 PostgresVacantPropertyRepository(pool)
@@ -395,31 +396,13 @@ async def _bootstrap_production_dependencies() -> None:
             raise
 
 
-async def _ensure_admin_schema(pool: object) -> None:
-    """Create the authentication tables required before admin bootstrap."""
-    await pool.execute(  # type: ignore[attr-defined]
-        """
-        CREATE TABLE IF NOT EXISTS admin_users (
-            admin_user_id UUID PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            display_name TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'full_admin',
-            is_active BOOLEAN NOT NULL DEFAULT true,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-        CREATE TABLE IF NOT EXISTS admin_sessions (
-            session_token TEXT PRIMARY KEY,
-            admin_user_id UUID NOT NULL REFERENCES admin_users(admin_user_id)
-                ON DELETE CASCADE,
-            expires_at TIMESTAMPTZ NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-        CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_user_id
-            ON admin_sessions (admin_user_id);
-        """
-    )
+async def _apply_database_migrations(pool: object) -> None:
+    """Apply bundled idempotent SQL migrations before serving requests."""
+    migrations_dir = Path(__file__).resolve().parents[2] / "migrations"
+    for migration_path in sorted(migrations_dir.glob("*.sql")):
+        sql = migration_path.read_text(encoding="utf-8")
+        await pool.execute(sql)  # type: ignore[attr-defined]
+        logger.info("DBマイグレーションを適用しました: %s", migration_path.name)
 
 
 async def _bootstrap_initial_admin_user(
