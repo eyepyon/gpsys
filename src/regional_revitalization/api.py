@@ -74,6 +74,14 @@ from regional_revitalization.resource_management import (
     search_resources_in_bounds,
     update_resource,
 )
+from regional_revitalization.update_request import (
+    InMemoryUpdateRequestRepository,
+    UpdateRequest,
+    UpdateRequestRepository,
+    approve_request,
+    reject_request,
+    submit_update_request,
+)
 from regional_revitalization.storage import InMemoryStorageClient, StorageClient
 from regional_revitalization.vacant_property import (
     BusinessStatus,
@@ -132,6 +140,7 @@ _admin_stats_repository: AdminStatsRepository = InMemoryAdminStatsRepository(
     vacant_property_repository=_vacant_property_repository,
     admin_user_repository=_admin_user_repository,
 )
+_update_request_repository: UpdateRequestRepository = InMemoryUpdateRequestRepository()
 
 
 def get_resource_repository() -> ResourceRepository:
@@ -162,6 +171,11 @@ def get_admin_user_repository() -> AdminUserRepository:
 def get_admin_stats_repository() -> AdminStatsRepository:
     """共有の`AdminStatsRepository`インスタンスを返す（`Depends`用）。"""
     return _admin_stats_repository
+
+
+def get_update_request_repository() -> UpdateRequestRepository:
+    """共有の`UpdateRequestRepository`インスタンスを返す（`Depends`用）。"""
+    return _update_request_repository
 
 
 def set_resource_repository(repository: ResourceRepository) -> None:
@@ -208,6 +222,12 @@ def set_admin_stats_repository(repository: AdminStatsRepository) -> None:
     _admin_stats_repository = repository
 
 
+def set_update_request_repository(repository: UpdateRequestRepository) -> None:
+    """共有の`UpdateRequestRepository`インスタンスを差し替える。"""
+    global _update_request_repository
+    _update_request_repository = repository
+
+
 # --------------------------------------------------------------------------
 # 起動時ブートストラップ（実運用実装への差し替え）
 # --------------------------------------------------------------------------
@@ -244,9 +264,14 @@ async def _bootstrap_production_dependencies() -> None:
             set_vacant_property_repository(
                 PostgresVacantPropertyRepository(pool)
             )
+            from regional_revitalization.postgres_update_request_repository import (
+                PostgresUpdateRequestRepository,
+            )
+
             admin_user_repository = PostgresAdminUserRepository(pool)
             set_admin_user_repository(admin_user_repository)
             set_admin_stats_repository(PostgresAdminStatsRepository(pool))
+            set_update_request_repository(PostgresUpdateRequestRepository(pool))
             logger.info("Cloud SQL for PostgreSQLへの接続を初期化しました")
 
             await _bootstrap_initial_admin_user(admin_user_repository)
@@ -1040,3 +1065,182 @@ async def admin_delete_resource(
         delete_resource(resource_repository, target_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+# --------------------------------------------------------------------------
+# 利用者からのデータ更新依頼（公開エンドポイント、認証不要）
+# --------------------------------------------------------------------------
+# 会員登録機能が無いため、依頼者情報は自由記述の連絡先文字列として受け取る。
+# 申請自体はpendingとして保存されるだけで、regional_resourcesへの反映は
+# 管理画面での承認操作時に初めて行われる（このエンドポイントは認証不要だが、
+# データ改変は起こさない）。
+
+
+class UpdateRequestSubmitBody(BaseModel):
+    """`POST /update-requests`のリクエストボディ。"""
+
+    target_resource_id: str | None = Field(
+        default=None,
+        description="変更提案の対象となる既存の地域資源ID。新規登録提案の場合はnull",
+    )
+    requester_contact: str | None = Field(default=None, description="依頼者の連絡先（任意）")
+    requested_changes: dict = Field(
+        ..., description="提案する変更内容（name/category/description/latitude/longitude/municipality）"
+    )
+    message: str | None = Field(default=None, description="依頼理由・補足メッセージ")
+
+
+class UpdateRequestBody(BaseModel):
+    """更新依頼1件分のレスポンス表現。"""
+
+    request_id: str
+    target_resource_id: str | None
+    requester_contact: str | None
+    requested_changes: dict
+    message: str | None
+    status: str
+    reviewed_by_admin_id: str | None
+    reviewed_at: datetime | None
+    created_at: datetime
+
+
+def _update_request_to_body(request: "UpdateRequest") -> UpdateRequestBody:
+    return UpdateRequestBody(
+        request_id=str(request.request_id),
+        target_resource_id=(
+            str(request.target_resource_id) if request.target_resource_id else None
+        ),
+        requester_contact=request.requester_contact,
+        requested_changes=request.requested_changes,
+        message=request.message,
+        status=request.status,
+        reviewed_by_admin_id=(
+            str(request.reviewed_by_admin_id)
+            if request.reviewed_by_admin_id
+            else None
+        ),
+        reviewed_at=request.reviewed_at,
+        created_at=request.created_at,
+    )
+
+
+@app.post("/update-requests", response_model=UpdateRequestBody, status_code=201)
+async def create_update_request(
+    body: UpdateRequestSubmitBody,
+    update_request_repository: UpdateRequestRepository = Depends(
+        get_update_request_repository
+    ),
+) -> UpdateRequestBody:
+    """利用者からの地域資源データ更新依頼を受け付ける（認証不要の公開エンドポイント）。"""
+    target_id: UUID | None = None
+    if body.target_resource_id is not None:
+        try:
+            target_id = UUID(body.target_resource_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail="target_resource_idの形式が不正です"
+            ) from exc
+
+    try:
+        request = submit_update_request(
+            target_id, body.requester_contact, body.requested_changes, body.message
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await update_request_repository.insert(request)
+    return _update_request_to_body(request)
+
+
+# --------------------------------------------------------------------------
+# 管理画面向けエンドポイント（更新依頼の確認・承認・却下: /admin/update-requests/*）
+# --------------------------------------------------------------------------
+
+
+class UpdateRequestListResponseBody(BaseModel):
+    """`GET /admin/update-requests`のレスポンスボディ。"""
+
+    requests: list[UpdateRequestBody]
+
+
+@app.get("/admin/update-requests", response_model=UpdateRequestListResponseBody)
+async def admin_list_update_requests(
+    status: str | None = None,
+    _current_user: AdminUser = Depends(get_current_admin_user),
+    update_request_repository: UpdateRequestRepository = Depends(
+        get_update_request_repository
+    ),
+) -> UpdateRequestListResponseBody:
+    """更新依頼の一覧を返す。`status`クエリパラメータで絞り込み可能
+
+    （`pending`/`approved`/`rejected`のいずれか。省略時は全件）。
+    """
+    requests = await update_request_repository.list_by_status(status)
+    return UpdateRequestListResponseBody(
+        requests=[_update_request_to_body(r) for r in requests]
+    )
+
+
+@app.post(
+    "/admin/update-requests/{request_id}/approve", response_model=AdminResourceBody
+)
+async def admin_approve_update_request(
+    request_id: str,
+    current_user: AdminUser = Depends(get_current_admin_user),
+    update_request_repository: UpdateRequestRepository = Depends(
+        get_update_request_repository
+    ),
+    resource_repository: ResourceRepository = Depends(get_resource_repository),
+    storage_client: StorageClient = Depends(get_storage_client),
+) -> AdminResourceBody:
+    """更新依頼を承認し、地域資源データに反映する。"""
+    try:
+        target_id = UUID(request_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="request_idの形式が不正です") from exc
+
+    try:
+        result = await approve_request(
+            update_request_repository,
+            resource_repository,
+            storage_client,
+            target_id,
+            current_user.admin_user_id,
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        status_code = 404 if "見つかりません" in detail else 400
+        raise HTTPException(status_code=status_code, detail=detail) from exc
+
+    return _resource_to_admin_body(result)
+
+
+@app.post(
+    "/admin/update-requests/{request_id}/reject",
+    response_model=UpdateRequestBody,
+)
+async def admin_reject_update_request(
+    request_id: str,
+    current_user: AdminUser = Depends(get_current_admin_user),
+    update_request_repository: UpdateRequestRepository = Depends(
+        get_update_request_repository
+    ),
+) -> UpdateRequestBody:
+    """更新依頼を却下する（地域資源データへの反映は行わない）。"""
+    try:
+        target_id = UUID(request_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="request_idの形式が不正です") from exc
+
+    try:
+        await reject_request(
+            update_request_repository, target_id, current_user.admin_user_id
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        status_code = 404 if "見つかりません" in detail else 400
+        raise HTTPException(status_code=status_code, detail=detail) from exc
+
+    updated = await update_request_repository.get_by_id(target_id)
+    assert updated is not None
+    return _update_request_to_body(updated)

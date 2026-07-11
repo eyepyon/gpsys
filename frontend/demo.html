@@ -98,6 +98,36 @@
 <button onclick="callVacantSearch()">検索</button>
 <pre id="v_result"></pre>
 
+<h2>4. データ更新の依頼（POST /update-requests）</h2>
+<p class="note">
+  既存の地域資源の内容修正、または新規追加の提案を送ることができます。
+  管理者が確認・承認すると実際のデータに反映されます（認証不要）。
+</p>
+<label>対象の地域資源ID（既存データを修正する場合のみ入力。新規提案の場合は空欄）</label>
+<input id="u_target_id" type="text" placeholder="（空欄可）" />
+<label>連絡先（任意）</label>
+<input id="u_contact" type="text" placeholder="example@example.com" />
+<label>名称（新規提案の場合は必須）</label>
+<input id="u_name" type="text" />
+<label>カテゴリ（新規提案の場合は必須）</label>
+<input id="u_category" type="text" />
+<label>説明文（新規提案の場合は必須）</label>
+<textarea id="u_description" rows="2"></textarea>
+<div class="row">
+  <div>
+    <label>緯度（新規提案の場合は必須）</label>
+    <input id="u_lat" type="number" step="0.0001" />
+  </div>
+  <div>
+    <label>経度（新規提案の場合は必須）</label>
+    <input id="u_lng" type="number" step="0.0001" />
+  </div>
+</div>
+<label>依頼理由・補足メッセージ</label>
+<textarea id="u_message" rows="2"></textarea>
+<button onclick="callSubmitUpdateRequest()">送信</button>
+<pre id="u_result"></pre>
+
 <hr style="margin-top: 3rem;" />
 <p style="font-size: 0.85rem; color: #555;">
   <a href="faq.html">よくある質問</a> ・
@@ -160,6 +190,28 @@ function callVacantSearch() {
     business_status: document.getElementById('v_status').value,
     types: types,
   }, 'v_result');
+}
+
+function callSubmitUpdateRequest() {
+  const targetId = document.getElementById('u_target_id').value.trim();
+  const changes = {};
+  const name = document.getElementById('u_name').value.trim();
+  const category = document.getElementById('u_category').value.trim();
+  const description = document.getElementById('u_description').value.trim();
+  const lat = document.getElementById('u_lat').value;
+  const lng = document.getElementById('u_lng').value;
+  if (name) changes.name = name;
+  if (category) changes.category = category;
+  if (description) changes.description = description;
+  if (lat !== '') changes.latitude = parseFloat(lat);
+  if (lng !== '') changes.longitude = parseFloat(lng);
+
+  postJson('/update-requests', {
+    target_resource_id: targetId || null,
+    requester_contact: document.getElementById('u_contact').value.trim() || null,
+    requested_changes: changes,
+    message: document.getElementById('u_message').value.trim() || null,
+  }, 'u_result');
 }
 </script>
 

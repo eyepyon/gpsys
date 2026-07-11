@@ -11,10 +11,34 @@
 
 <div class="admin-container">
   <h1 style="font-size:1.4rem;">利用者からの更新依頼</h1>
+  <p style="color:#6b7280; font-size:0.9rem;">
+    利用者から寄せられた地域資源データの新規登録・変更提案を確認し、承認または却下できます。
+    承認すると即座にデータベースへ反映されます。
+  </p>
+
+  <div id="error" class="admin-error" style="display:none;"></div>
+
   <div class="admin-card">
-    <p style="color:#6b7280;">
-      利用者からのデータ更新依頼の確認・承認機能は、次のステップで実装予定です。
-    </p>
+    <div style="display:flex; gap:0.6rem; margin-bottom:1rem;">
+      <button class="admin-btn filter-btn" data-status="pending">未対応</button>
+      <button class="admin-btn secondary filter-btn" data-status="approved">承認済み</button>
+      <button class="admin-btn secondary filter-btn" data-status="rejected">却下済み</button>
+      <button class="admin-btn secondary filter-btn" data-status="">すべて</button>
+    </div>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>種別</th>
+          <th>提案内容</th>
+          <th>連絡先</th>
+          <th>メッセージ</th>
+          <th>状態</th>
+          <th>受付日時</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="request-rows"></tbody>
+    </table>
   </div>
 </div>
 
@@ -22,6 +46,93 @@
 <script>
 requireLogin();
 renderAdminNav("requests");
+
+let currentStatus = "pending";
+
+function formatChanges(changes) {
+  return Object.entries(changes)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join("<br>");
+}
+
+function statusBadge(status) {
+  const labels = { pending: "未対応", approved: "承認済み", rejected: "却下済み" };
+  return `<span class="admin-badge ${status}">${labels[status] || status}</span>`;
+}
+
+async function loadRequests() {
+  const errorEl = document.getElementById("error");
+  errorEl.style.display = "none";
+  try {
+    const qs = currentStatus ? `?status=${currentStatus}` : "";
+    const res = await adminFetch(`/admin/update-requests${qs}`);
+    if (!res.ok) throw new Error(`一覧の取得に失敗しました (HTTP ${res.status})`);
+    const data = await res.json();
+    const tbody = document.getElementById("request-rows");
+    tbody.innerHTML = "";
+
+    for (const r of data.requests) {
+      const tr = document.createElement("tr");
+      const kind = r.target_resource_id ? "既存データの変更" : "新規登録の提案";
+      const actions =
+        r.status === "pending"
+          ? `<button class="admin-btn approve-btn" data-id="${r.request_id}">承認</button>
+             <button class="admin-btn danger reject-btn" data-id="${r.request_id}">却下</button>`
+          : "-";
+      tr.innerHTML = `
+        <td>${kind}</td>
+        <td>${formatChanges(r.requested_changes)}</td>
+        <td>${r.requester_contact || "-"}</td>
+        <td>${r.message || "-"}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${new Date(r.created_at).toLocaleString("ja-JP")}</td>
+        <td>${actions}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    tbody.querySelectorAll(".approve-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("この依頼を承認し、データベースに反映しますか？")) return;
+        const res = await adminFetch(
+          `/admin/update-requests/${btn.dataset.id}/approve`,
+          { method: "POST" }
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert(body.detail || "承認に失敗しました");
+        }
+        loadRequests();
+      });
+    });
+    tbody.querySelectorAll(".reject-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("この依頼を却下しますか？")) return;
+        const res = await adminFetch(
+          `/admin/update-requests/${btn.dataset.id}/reject`,
+          { method: "POST" }
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert(body.detail || "却下に失敗しました");
+        }
+        loadRequests();
+      });
+    });
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  }
+}
+
+document.querySelectorAll(".filter-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    currentStatus = btn.dataset.status;
+    loadRequests();
+  });
+});
+
+loadRequests();
 </script>
 
 </body>
