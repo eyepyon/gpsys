@@ -74,8 +74,12 @@ async def run() -> None:
             await pool.execute(
                 """INSERT INTO places_search_results
                    (result_id,search_request_id,place_id,name,location,business_status,
-                    types,address,phone_number,is_registered,created_at)
-                   SELECT $1,$2,$3,$4,ST_MakePoint($5,$6)::geography,$7,$8,$9,$10,$11,$12
+                    types,address,phone_number,is_registered,created_at,embedding)
+                   SELECT $1,$2,$3,$4,ST_MakePoint($5,$6)::geography,$7,$8,$9,$10,$11,$12,
+                          google_ml.embedding(
+                              $4 || ' ' || array_to_string($8::text[], ' ')
+                                 || COALESCE(' ' || $9, '')
+                          )
                    WHERE NOT EXISTS (SELECT 1 FROM places_search_results WHERE place_id=$3)""",
                 uuid4(), request_id, place.place_id, place.name,
                 place.location.longitude, place.location.latitude,

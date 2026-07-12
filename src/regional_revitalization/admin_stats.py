@@ -8,8 +8,8 @@
 - ダッシュボード概要（各テーブルの総件数、未対応の更新依頼件数）
 - 市町村別データ数（regional_resources / vacant_property_candidates）
 - 業種別データ数（vacant_property_candidates.typesの配列展開集計）
-- ベクトルDB(pgvector)の分布状況（embeddingを2次元に圧縮した散布図用の座標、
-  カテゴリ別のクラスタ数）
+- ベクトルDB(pgvector)の分布状況（収集済み全店舗データ`places_search_results`の
+  embeddingを2次元に圧縮した散布図用の座標、業種カテゴリ別のクラスタ数）
 
 **embeddingの次元圧縮について**: 768次元のembeddingをブラウザで可視化するには
 2次元程度への圧縮が必要である。scikit-learn等の重い依存関係を追加せず、
@@ -88,8 +88,9 @@ class VectorPoint:
     """ベクトル分布散布図用の1点分。
 
     Attributes:
-        resource_id: 対象地域資源のID（文字列化したUUID）。
-        category: カテゴリ（クラスタ色分けに使用）。
+        resource_id: 対象データのID（全店舗データの場合はplace_id）。
+        category: カテゴリ（クラスタ色分けに使用。全店舗データの場合は
+            先頭の業種タグ）。
         x: 2次元圧縮後のX座標。
         y: 2次元圧縮後のY座標。
     """
@@ -105,8 +106,8 @@ class ClusterCount:
     """カテゴリ別のクラスタ数（=カテゴリごとの件数）の1件分。
 
     Attributes:
-        category: カテゴリ名。
-        count: そのカテゴリに属する地域資源の件数。
+        category: カテゴリ名（全店舗データの場合は先頭の業種タグ）。
+        count: そのカテゴリに属するデータの件数。
     """
 
     category: str
@@ -135,11 +136,12 @@ class AdminStatsRepository(Protocol):
         ...
 
     async def get_vector_points(self, limit: int) -> list[VectorPoint]:
-        """地域資源のembeddingを2次元に圧縮した散布図用の点を最大`limit`件返す。"""
+        """収集済み全店舗データのembeddingを2次元に圧縮した散布図用の点を
+        最大`limit`件返す。"""
         ...
 
     async def get_cluster_counts(self) -> list[ClusterCount]:
-        """カテゴリ別のクラスタ数（=カテゴリごとの地域資源件数）を件数降順で返す。"""
+        """業種カテゴリ別のクラスタ数（=カテゴリごとの店舗件数）を件数降順で返す。"""
         ...
 
 
@@ -177,6 +179,23 @@ def _project_embedding_to_2d(embedding: list[float]) -> tuple[float, float]:
     # 次元数で正規化し、ベクトル次元数に依存しないスケールに揃える。
     dimension = len(embedding)
     return (x / dimension, y / dimension)
+
+
+def _parse_embedding_value(value: Any) -> list[float]:
+    """DBから取得したembedding値をfloatのリストに変換する。
+
+    asyncpgはpgvectorの`VECTOR`型のコーデックを登録していない場合、
+    `"[0.1,0.2,...]"`形式の文字列として値を返すため、文字列表現と
+    シーケンス表現の両方を受け付ける。
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        stripped = value.strip().lstrip("[").rstrip("]")
+        if not stripped:
+            return []
+        return [float(item) for item in stripped.split(",")]
+    return [float(item) for item in value]
 
 
 class PostgresAdminStatsRepository:
@@ -275,17 +294,29 @@ class PostgresAdminStatsRepository:
         ]
 
     async def get_vector_points(self, limit: int) -> list[VectorPoint]:
+        places_table = await self._pool.fetchval(
+            "SELECT to_regclass('places_search_results')"
+        )
+        if places_table is None:
+            return []
         rows = await self._pool.fetch(
-            "SELECT resource_id, category, embedding FROM regional_resources LIMIT $1",
+            """
+            SELECT place_id,
+                   COALESCE(types[1], '(未分類)') AS category,
+                   embedding
+            FROM places_search_results
+            WHERE embedding IS NOT NULL
+            LIMIT $1
+            """,
             limit,
         )
         points: list[VectorPoint] = []
         for row in rows:
-            embedding = list(row["embedding"]) if row["embedding"] is not None else []
+            embedding = _parse_embedding_value(row["embedding"])
             x, y = _project_embedding_to_2d(embedding)
             points.append(
                 VectorPoint(
-                    resource_id=str(row["resource_id"]),
+                    resource_id=str(row["place_id"]),
                     category=row["category"],
                     x=x,
                     y=y,
@@ -294,10 +325,15 @@ class PostgresAdminStatsRepository:
         return points
 
     async def get_cluster_counts(self) -> list[ClusterCount]:
+        places_table = await self._pool.fetchval(
+            "SELECT to_regclass('places_search_results')"
+        )
+        if places_table is None:
+            return []
         rows = await self._pool.fetch(
             """
-            SELECT category, COUNT(*) AS c
-            FROM regional_resources
+            SELECT COALESCE(types[1], '(未分類)') AS category, COUNT(*) AS c
+            FROM places_search_results
             GROUP BY category
             ORDER BY c DESC
             """

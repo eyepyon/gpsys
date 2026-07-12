@@ -34,15 +34,15 @@
   </div>
 
   <div class="admin-card">
-    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB クラスタ数</h2>
-    <table class="admin-table"><thead><tr><th>カテゴリ</th><th>件数</th></tr></thead>
+    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB クラスタ数（全店舗データ）</h2>
+    <table class="admin-table"><thead><tr><th>業種カテゴリ</th><th>件数</th></tr></thead>
       <tbody id="cluster-rows"></tbody></table>
   </div>
 
   <div class="admin-card">
-    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB分布</h2>
+    <h2 style="font-size:1.05rem; margin-top:0;">ベクトルDB分布（全店舗データ）</h2>
     <p style="font-size:0.8rem; color:#6b7280;">
-      居抜き物件の検索・分析に使うembeddingを2次元に圧縮した分布表示です。
+      収集済みの全店舗データのembedding（店舗名・業種・住所から生成）を2次元に圧縮した分布表示です。点の色は先頭の業種タグごとの色分けです。
     </p>
     <canvas id="vector-canvas" width="900" height="500" style="max-width:100%; border:1px solid #e5e7eb; border-radius:8px;"></canvas>
   </div>
