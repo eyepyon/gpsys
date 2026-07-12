@@ -16,6 +16,11 @@ from regional_revitalization.vacant_property_sync_job import get_places_api_key,
 RADIUS_KM = 1.0
 MAX_RESULTS = 400
 MIN_SEED_DISTANCE_KM = 0.3
+# embeddingバックフィルの1バッチあたりの行数と、1回のジョブ実行での上限。
+# アプリ起動時（マイグレーション適用時）に全件を同期生成すると起動タイムアウトを
+# 超過するため、バックフィルは本ジョブがバッチで行う（migrations/004参照）。
+EMBEDDING_BACKFILL_BATCH_SIZE = 100
+EMBEDDING_BACKFILL_MAX_PER_RUN = 2000
 
 
 def distance_km(a: GeoPoint, b: GeoPoint) -> float:
@@ -24,6 +29,38 @@ def distance_km(a: GeoPoint, b: GeoPoint) -> float:
     dlon = math.radians(b.longitude - a.longitude)
     value = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
     return 12742.0 * math.asin(math.sqrt(value))
+
+
+async def backfill_embeddings(pool: object) -> int:
+    """embedding未生成の店舗データにembeddingをバッチで生成・格納する。
+
+    店舗名・業種タグ・住所の連結テキストから`google_ml.embedding(...)`で
+    DB側生成する。1回の実行では最大`EMBEDDING_BACKFILL_MAX_PER_RUN`件までとし、
+    残りは次回以降のジョブ実行で処理する（冪等）。
+
+    Returns:
+        バックフィルした行数。
+    """
+    total = 0
+    while total < EMBEDDING_BACKFILL_MAX_PER_RUN:
+        status = await pool.execute(  # type: ignore[attr-defined]
+            """UPDATE places_search_results
+               SET embedding = google_ml.embedding(
+                   name || ' ' || array_to_string(types, ' ')
+                        || COALESCE(' ' || address, '')
+               )
+               WHERE result_id IN (
+                   SELECT result_id FROM places_search_results
+                   WHERE embedding IS NULL LIMIT $1
+               )""",
+            min(EMBEDDING_BACKFILL_BATCH_SIZE, EMBEDDING_BACKFILL_MAX_PER_RUN - total),
+        )
+        # asyncpgのexecuteは"UPDATE <n>"形式のステータス文字列を返す。
+        updated = int(status.split()[-1])
+        total += updated
+        if updated == 0:
+            break
+    return total
 
 
 async def run() -> None:
@@ -91,6 +128,7 @@ async def run() -> None:
                 "UPDATE search_requests SET processed_at=now() WHERE search_request_id=ANY($1::uuid[])",
                 [request_id for request_id, _ in seeds],
             )
+        await backfill_embeddings(pool)
     finally:
         await pool.close()
 
