@@ -13,7 +13,7 @@ from regional_revitalization.real_places_search_client import RealPlacesSearchCl
 from regional_revitalization.vacant_property import BusinessStatus, VacantPropertyCandidate
 from regional_revitalization.vacant_property_sync_job import get_places_api_key, parse_db_connection_json, _get_required_env
 
-RADIUS_KM = 10.0
+RADIUS_KM = 1.0
 MAX_RESULTS = 400
 MIN_SEED_DISTANCE_KM = 0.3
 

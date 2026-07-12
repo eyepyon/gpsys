@@ -1468,11 +1468,11 @@ async def admin_create_search_origin(
     _current_user: AdminUser = Depends(get_current_admin_user),
     repository: SearchRequestRepository = Depends(get_search_request_repository),
 ) -> SearchRequestBody:
-    """右クリック地点を10km圏の閉鎖店舗探索起点として登録する。"""
+    """右クリック地点を1km圏の閉鎖店舗探索起点として登録する。"""
     request = await record_search_request(
         repository,
         location=GeoPoint(latitude=body.latitude, longitude=body.longitude),
-        radius_km=10.0,
+        radius_km=1.0,
         business_status=BusinessStatus.CLOSED_PERMANENTLY,
         types=None,
         result_count=0,
@@ -1514,7 +1514,7 @@ async def admin_register_search_origin_template(
         await record_search_request(
             repository,
             location=GeoPoint(latitude=point["latitude"], longitude=point["longitude"]),
-            radius_km=10.0,
+            radius_km=1.0,
             business_status=BusinessStatus.CLOSED_PERMANENTLY,
             types=None,
             result_count=0,
