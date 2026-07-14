@@ -110,6 +110,12 @@ resource "google_cloud_run_v2_job" "vacant_sync" {
             }
           }
         }
+
+
+        env {
+          name  = "PLACES_API_ENABLED"
+          value = tostring(var.places_api_enabled)
+        }
       }
     }
   }

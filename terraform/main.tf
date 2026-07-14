@@ -230,6 +230,7 @@ module "cloudrun_app" {
   admin_initial_username           = var.admin_initial_username
   admin_initial_password_secret_id = google_secret_manager_secret.admin_initial_password.secret_id
   admin_places_api_key_secret_id   = var.admin_places_api_key != "" ? google_secret_manager_secret.admin_places_api_key[0].secret_id : ""
+  places_api_enabled               = var.places_api_enabled
   labels                           = var.labels
 }
 
@@ -264,6 +265,7 @@ module "vacant_property_sync" {
   vpc_connector_id        = module.network.connector_id
   db_connection_secret_id = module.cloudsql.db_connection_secret_id
   places_api_key          = var.places_api_key
+  places_api_enabled      = var.places_api_enabled
   labels                  = var.labels
 
   depends_on = [google_project_service.apis]
@@ -280,4 +282,5 @@ module "scheduler" {
   schedule           = var.vacant_sync_schedule
   time_zone          = var.vacant_sync_time_zone
   target_job_name    = module.vacant_property_sync.job_name
+  paused             = !var.places_api_enabled
 }

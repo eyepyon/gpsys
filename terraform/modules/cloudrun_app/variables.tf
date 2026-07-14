@@ -106,6 +106,12 @@ variable "admin_places_api_key_secret_id" {
   default     = ""
 }
 
+variable "places_api_enabled" {
+  description = "管理画面からのGoogle Places API呼び出しを許可するか"
+  type        = bool
+  default     = false
+}
+
 variable "cors_allowed_origins" {
   description = <<-EOT
     ブラウザから直接APIRunを呼び出すことを許可するオリジンのカンマ区切り一覧

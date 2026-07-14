@@ -29,6 +29,7 @@ resource "google_cloud_scheduler_job" "vacant_sync_trigger" {
   name      = var.scheduler_job_name
   schedule  = var.schedule
   time_zone = var.time_zone
+  paused    = var.paused
 
   # Places APIの利用規約上の制約（business_status等は概ね30日で再取得が必要）を
   # 踏まえ、既定では日次実行とする（design.md Dependencies章参照）。

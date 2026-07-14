@@ -184,6 +184,12 @@ variable "admin_places_api_key" {
   default     = ""
 }
 
+variable "places_api_enabled" {
+  description = "Google Places APIの呼び出しを許可するか。falseでは定期ジョブを停止し、管理画面からの検索も拒否する"
+  type        = bool
+  default     = false
+}
+
 variable "admin_initial_username" {
   description = <<-EOT
     管理画面(inuki/admin)の初回管理者アカウントのログインID。

@@ -36,6 +36,12 @@ variable "places_api_key" {
   sensitive   = true
 }
 
+variable "places_api_enabled" {
+  description = "Google Places API呼び出しを許可するか"
+  type        = bool
+  default     = false
+}
+
 variable "cpu" {
   description = "コンテナに割り当てるCPU数"
   type        = string

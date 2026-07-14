@@ -173,6 +173,11 @@ _places_search_result_repository: PlacesSearchResultRepository = (
 )
 
 
+def places_api_enabled() -> bool:
+    """Google Places APIへの外部呼び出しが明示的に許可されているか返す。"""
+    return os.environ.get("PLACES_API_ENABLED", "false").lower() == "true"
+
+
 def get_resource_repository() -> ResourceRepository:
     """共有の`ResourceRepository`インスタンスを返す（`Depends`用）。"""
     return _resource_repository
@@ -384,7 +389,7 @@ async def _bootstrap_production_dependencies() -> None:
     # 居抜き物件同期サービス（Cloud Run Jobs）とは別に、APIRunからも
     # Places APIを呼び出すため、専用のSecret Manager経由の環境変数を用意する。
     places_api_key = os.environ.get("ADMIN_PLACES_API_KEY")
-    if places_api_key:
+    if places_api_enabled() and places_api_key:
         try:
             from regional_revitalization.real_places_search_client import (
                 RealPlacesSearchClient,
@@ -1589,6 +1594,12 @@ async def admin_execute_places_search(
     への反映は行われない（`POST /admin/places-search/{result_id}/register`
     で個別に登録する）。
     """
+    if not places_api_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Google Places API検索は現在一時停止中です",
+        )
+
     search_request_id: UUID | None = None
     if body.search_request_id is not None:
         try:

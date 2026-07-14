@@ -78,9 +78,13 @@ def vacant_repo() -> InMemoryVacantPropertyRepository:
 
 
 @pytest.fixture(autouse=True)
-def _reset_shared_instances(vacant_repo: InMemoryVacantPropertyRepository) -> None:
+def _reset_shared_instances(
+    vacant_repo: InMemoryVacantPropertyRepository,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from regional_revitalization.inference import MockInferenceClient
 
+    monkeypatch.setenv("PLACES_API_ENABLED", "true")
     resource_repo = InMemoryResourceRepository()
     admin_repo = InMemoryAdminUserRepository()
 
@@ -150,6 +154,25 @@ class TestSearchRequestRecording:
 
 
 class TestAdminPlacesSearch:
+    async def test_places_api停止中は検索を拒否する(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        token = await _login(client)
+        monkeypatch.setenv("PLACES_API_ENABLED", "false")
+
+        response = client.post(
+            "/admin/places-search",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "latitude": 35.68,
+                "longitude": 139.76,
+                "radius_km": 1.0,
+            },
+        )
+
+        assert response.status_code == 503
+        assert response.json()["detail"] == "Google Places API検索は現在一時停止中です"
+
     async def test_executes_search_and_returns_unregistered_results(
         self, client: TestClient
     ) -> None:

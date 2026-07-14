@@ -125,6 +125,11 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
+      env {
+        name  = "PLACES_API_ENABLED"
+        value = tostring(var.places_api_enabled)
+      }
+
       # 動作確認用フロント画面等、ブラウザから直接呼び出すオリジンを
       # 許可する場合にのみ設定する（未設定時はCORS無効のまま）。
       dynamic "env" {

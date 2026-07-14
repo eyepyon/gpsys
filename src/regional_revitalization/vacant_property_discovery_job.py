@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import os
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -64,6 +65,9 @@ async def backfill_embeddings(pool: object) -> int:
 
 
 async def run() -> None:
+    if os.environ.get("PLACES_API_ENABLED", "false").lower() != "true":
+        return
+
     import asyncpg
 
     db = parse_db_connection_json(_get_required_env("DB_CONNECTION_JSON"))

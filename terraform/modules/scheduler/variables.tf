@@ -40,3 +40,9 @@ variable "target_job_name" {
   description = "トリガー対象のCloud Run Jobs名（居抜き物件同期サービス）"
   type        = string
 }
+
+variable "paused" {
+  description = "Cloud Schedulerジョブを一時停止するか"
+  type        = bool
+  default     = false
+}
