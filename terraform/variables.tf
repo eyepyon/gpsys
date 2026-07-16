@@ -89,7 +89,7 @@ variable "db_instance_name" {
 variable "db_tier" {
   description = "Cloud SQLインスタンスのマシンタイプ（tier）"
   type        = string
-  default     = "db-custom-2-8192"
+  default     = "db-f1-micro"
 }
 
 variable "db_name" {
@@ -124,7 +124,7 @@ variable "places_api_key" {
 variable "vacant_sync_schedule" {
   description = "居抜き物件同期サービスのCloud Schedulerによる実行スケジュール（unix-cron形式）"
   type        = string
-  default     = "*/10 * * * *" # 10分ごとに実行する
+  default     = "0 3 * * *" # 1日1回。places_api_enabled=false時は停止する
 }
 
 variable "vacant_sync_time_zone" {

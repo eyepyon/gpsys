@@ -57,13 +57,13 @@ variable "memory" {
 variable "max_retries" {
   description = "ジョブ実行失敗時の最大リトライ回数"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "task_timeout" {
   description = "タスクのタイムアウト（秒単位の文字列、例: \"1800s\"）"
   type        = string
-  default     = "1800s"
+  default     = "900s"
 }
 
 variable "labels" {

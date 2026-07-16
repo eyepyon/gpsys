@@ -35,5 +35,5 @@ variable "min_instances" {
 variable "max_instances" {
   description = "VPCアクセスコネクタの最大インスタンス数"
   type        = number
-  default     = 3
+  default     = 2
 }

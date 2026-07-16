@@ -83,7 +83,7 @@ terraform/
 | `vpc_network_name` | - | `default` | VPCコネクタを紐づける対象VPCネットワーク名 |
 | `vpc_connector_cidr` | - | `10.8.0.0/28` | VPCアクセスコネクタのCIDR範囲(/28) |
 | `db_instance_name` | - | `regional-revitalization-db` | Cloud SQLインスタンス名 |
-| `db_tier` | - | `db-custom-2-8192` | Cloud SQLのマシンタイプ |
+| `db_tier` | - | `db-f1-micro` | Cloud SQLのマシンタイプ（コスト優先の共有コア） |
 | `db_name` | - | `regional_revitalization` | アプリケーション用DB名 |
 | `db_user` | - | `app_user` | アプリケーション用DBユーザー名 |
 | `db_password` | ○（機密） | - | アプリケーション用DBユーザーのパスワード |

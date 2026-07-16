@@ -41,7 +41,7 @@ resource "google_sql_database_instance" "instance" {
 
     backup_configuration {
       enabled                        = true
-      point_in_time_recovery_enabled = true
+      point_in_time_recovery_enabled = false
     }
 
     # google_ml_integration拡張（DB側embedding生成）を有効化するためのフラグ。

@@ -76,7 +76,8 @@ resource "google_cloud_run_v2_service" "inference" {
           memory           = var.memory
           "nvidia.com/gpu" = tostring(var.gpu_count)
         }
-        # GPUを使い切るためインスタンスを常に起動状態で確保する
+        # GPU実行中はCPUを常時割り当てる。min_instance_count=0のため、
+        # リクエストがない間はインスタンスごと停止して課金を抑える。
         cpu_idle = false
       }
     }

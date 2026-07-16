@@ -73,6 +73,7 @@ resource "google_cloud_run_v2_service" "app" {
           cpu    = var.cpu
           memory = var.memory
         }
+        cpu_idle = true
       }
 
       env {

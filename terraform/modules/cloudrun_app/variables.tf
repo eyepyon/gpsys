@@ -59,7 +59,7 @@ variable "min_instance_count" {
 variable "max_instance_count" {
   description = "最大インスタンス数"
   type        = number
-  default     = 10
+  default     = 1
 }
 
 variable "cpu" {

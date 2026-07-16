@@ -54,17 +54,16 @@ variable "gpu_count" {
 
 variable "min_instance_count" {
   description = <<-EOT
-    最小インスタンス数。design.md Performance Considerationsに記載の通り、
-    GPUモデルのコールドスタート時間を避けるため1以上を設定することを推奨する。
+    最小インスタンス数。コスト優先のため0とし、未使用時のGPU課金を停止する。
   EOT
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "max_instance_count" {
   description = "最大インスタンス数"
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "cpu" {

@@ -10,6 +10,11 @@
   panel.className = 'fixed left-1/2 -translate-x-1/2 top-20 z-[60] bg-white shadow-xl border border-gray-200 rounded-xl p-4';
   panel.style.width = 'min(920px, calc(100vw - 2rem))';
   panel.innerHTML = `
+    <div class="flex justify-end mb-2">
+      <button id="toggle-search-panel" type="button" class="px-3 py-1.5 border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-lg text-xs font-medium flex items-center gap-1" aria-expanded="true">
+        <i class="ri-subtract-line"></i><span>最小化</span>
+      </button>
+    </div>
     <form id="vacant-search-form" class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
       <input id="search-api-url" type="hidden" value="${escapeHtml(apiBaseUrl)}">
       <label class="text-xs text-gray-600">緯度
@@ -34,12 +39,27 @@
 
   const form = document.getElementById('vacant-search-form');
   form.addEventListener('submit', search);
+  document.getElementById('toggle-search-panel').addEventListener('click', toggleSearchPanel);
   document.getElementById('get-current-location').addEventListener('click', getCurrentLocation);
   if (view === 'map') setupPlaceTypeSelector();
   if (view === 'list') {
     const grid = document.getElementById('search-result-grid');
+    const pagination = document.getElementById('search-pagination');
+    if (pagination) pagination.classList.add('hidden');
     if (grid) grid.innerHTML = '<p class="col-span-3 py-12 text-center text-gray-500">DBから物件情報を読み込んでいます…</p>';
     form.requestSubmit();
+  }
+
+  function toggleSearchPanel() {
+    const button = document.getElementById('toggle-search-panel');
+    const label = button.querySelector('span');
+    const icon = button.querySelector('i');
+    const minimized = !form.classList.contains('hidden');
+    form.classList.toggle('hidden', minimized);
+    panel.style.width = minimized ? 'auto' : 'min(920px, calc(100vw - 2rem))';
+    button.setAttribute('aria-expanded', String(!minimized));
+    label.textContent = minimized ? '元に戻す' : '最小化';
+    icon.className = minimized ? 'ri-expand-diagonal-line' : 'ri-subtract-line';
   }
 
   function setupPlaceTypeSelector() {
@@ -154,10 +174,13 @@
       message.textContent = `${candidates.length}件見つかりました（営業状態による絞り込みなし）`;
       render(candidates);
     } catch (error) {
-      message.textContent = `検索に失敗しました: ${error.message}`;
+      console.error('物件情報の取得に失敗しました', error);
+      message.textContent = '現在コスト対策のためAPIを一時停止しています';
       if (view === 'list') {
         const grid = document.getElementById('search-result-grid');
-        if (grid) grid.innerHTML = `<p class="col-span-3 py-12 text-center text-red-600">DBから物件情報を取得できませんでした: ${escapeHtml(error.message)}</p>`;
+        const pagination = document.getElementById('search-pagination');
+        if (pagination) pagination.classList.add('hidden');
+        if (grid) grid.innerHTML = '<p class="col-span-3 py-12 text-center font-bold text-red-600">現在コスト対策のためAPIを一時停止しています</p>';
       }
     } finally {
       button.disabled = false;
@@ -191,7 +214,7 @@
           ${candidate.phone_number ? `<p class="text-sm text-gray-600 mt-2">電話: ${escapeHtml(candidate.phone_number)}</p>` : ''}
         </div>
       </article>`).join('') : '<p class="col-span-3 py-12 text-center text-gray-500">条件に一致する物件はありません。</p>';
-    const pagination = grid.nextElementSibling;
+    const pagination = document.getElementById('search-pagination');
     if (pagination) pagination.classList.add('hidden');
   }
 

@@ -44,9 +44,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
 
 from regional_revitalization.admin_auth import (
     AdminUser,
@@ -136,15 +137,40 @@ app = FastAPI(
 # CORSを許可する（未設定時は既定でCORS無効。ブラウザから直接呼び出す
 # 確認用フロント画面等、必要な場合にのみ明示的に有効化する運用とする）。
 _cors_allowed_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+_cors_allowed_origin_set = {
+    origin.strip() for origin in _cors_allowed_origins.split(",") if origin.strip()
+}
 if _cors_allowed_origins:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            origin.strip() for origin in _cors_allowed_origins.split(",") if origin.strip()
-        ],
+        allow_origins=list(_cors_allowed_origin_set),
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "Authorization"],
     )
+
+
+@app.middleware("http")
+async def _cors_safe_internal_server_error(request: Request, call_next):
+    """依存関係初期化等の未処理例外を、CORS対応した500応答へ変換する。
+
+    Starletteの標準ServerErrorMiddlewareが生成する500応答は、ユーザー定義の
+    CORSMiddlewareより外側で生成されるためCORSヘッダーを持たない。Cloud SQL停止時
+    など、エンドポイント到達前の例外でもブラウザが応答を読めるようにする。
+    """
+    try:
+        return await call_next(request)
+    except Exception:  # noqa: BLE001 - 最外周で500応答へ変換するため
+        logger.exception("リクエスト処理中に未処理の例外が発生しました")
+        headers: dict[str, str] = {}
+        origin = request.headers.get("origin")
+        if origin and origin in _cors_allowed_origin_set:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Vary"] = "Origin"
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error"},
+            headers=headers,
+        )
 
 
 # --------------------------------------------------------------------------

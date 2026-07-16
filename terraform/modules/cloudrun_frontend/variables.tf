@@ -34,7 +34,7 @@ variable "min_instance_count" {
 variable "max_instance_count" {
   description = "最大インスタンス数"
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "cpu" {
@@ -45,10 +45,7 @@ variable "cpu" {
 
 variable "memory" {
   description = <<-EOT
-    コンテナに割り当てるメモリ量。GCPの制約上、CPU always allocated
-    （本モジュールのデフォルト設定、cpu_idle未指定=false相当）の場合は
-    512Mi未満を指定できない（"Total memory < 512 Mi is not supported with
-    cpu always allocated"エラーになる）ため、512Mi以上を指定すること。
+    コンテナに割り当てるメモリ量。
   EOT
   type        = string
   default     = "512Mi"
