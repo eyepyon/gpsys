@@ -75,7 +75,7 @@ locals {
     "roles/secretmanager.admin",             # Secret Managerシークレットの管理
     "roles/artifactregistry.writer",         # コンテナイメージのpush
     "roles/cloudscheduler.admin",            # Cloud Schedulerジョブの管理
-    "roles/vpcaccess.admin",                 # Serverless VPC Access コネクタの管理
+    "roles/vpcaccess.admin",                 # 既存環境との互換性維持（Direct VPC移行後に別途削除可能）
     "roles/iam.serviceAccountUser",          # Cloud Run実行用サービスアカウントの利用
     "roles/iam.serviceAccountAdmin",         # 各サービス実行用サービスアカウントの作成・IAM設定
     "roles/servicenetworking.networksAdmin", # Private Services Access(VPCピアリング)の管理

@@ -9,3 +9,8 @@ variable "network_name" {
   description = "Cloud SQLプライベート接続に使用するVPCネットワーク名"
   type        = string
 }
+
+variable "private_ip_range_name" {
+  description = "Cloud SQLのPrivate Services Access用IPレンジ名"
+  type        = string
+}

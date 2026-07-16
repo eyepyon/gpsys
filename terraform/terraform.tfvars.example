@@ -37,9 +37,8 @@ admin_initial_username = "admin"
 vacant_sync_job_name = "vacant-property-sync"
 vacant_sync_image    = "us-central1-docker.pkg.dev/your-gcp-project-id/regional-revitalization/vacant-sync:latest"
 
-vpc_network_name   = "default"
+vpc_network_name    = "default"
 vpc_subnetwork_name = "default"
-vpc_connector_cidr = "10.8.0.0/28"
 
 db_instance_name = "regional-revitalization-db"
 db_tier          = "db-f1-micro"

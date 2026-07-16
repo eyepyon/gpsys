@@ -2,7 +2,7 @@
 #
 # design.md「コンポーネント6: IaC (Terraform)」「Dependencies」章に基づき、
 # 各モジュールを呼び出してGCPリソース一式（Cloud Run x2、Cloud Run Jobs、
-# Cloud Scheduler、Cloud SQL、Cloud Storage、VPCコネクタ、IAM、Secret Manager）
+# Cloud Scheduler、Cloud SQL、Cloud Storage、Direct VPC egress、IAM、Secret Manager）
 # をus-central1リージョンにプロビジョニングする。
 #
 # 【重要】本コードはTerraform CLIが利用できない開発環境で作成されたため、
@@ -81,8 +81,9 @@ module "github_actions_wif" {
 module "network" {
   source = "./modules/network"
 
-  project_id   = var.project_id
-  network_name = var.vpc_network_name
+  project_id            = var.project_id
+  network_name          = var.vpc_network_name
+  private_ip_range_name = "rr-connector-${var.environment}-psa-range"
 
   depends_on = [google_project_service.apis]
 }

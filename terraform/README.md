@@ -31,7 +31,7 @@ terraform/
 ├── outputs.tf                   # ルート構成の出力値
 ├── terraform.tfvars.example      # 変数のサンプル（実際の値・機密情報は含まない）
 └── modules/
-    ├── network/                              # VPCコネクタ + Private Services Access
+    ├── network/                              # Direct VPC egress + Private Services Access
     ├── cloudsql/                              # Cloud SQL for PostgreSQL + Secret Manager(DB接続情報)
     ├── storage/                               # 非公開Cloud Storageバケット
     ├── cloudrun_app/                          # アプリ本体サービス(APIRun)
@@ -80,8 +80,8 @@ terraform/
 | `admin_places_api_key` | - | `""` | 管理画面の「この場所でGoogle Places APIを検索する」機能用APIキー。空文字列の場合は機能無効(モッククライアントのまま動作) |
 | `vacant_sync_job_name` | - | `vacant-property-sync` | 居抜き物件同期サービスのCloud Run Jobs名 |
 | `vacant_sync_image` | ○ | - | 居抜き物件同期サービスのコンテナイメージURL |
-| `vpc_network_name` | - | `default` | VPCコネクタを紐づける対象VPCネットワーク名 |
-| `vpc_connector_cidr` | - | `10.8.0.0/28` | VPCアクセスコネクタのCIDR範囲(/28) |
+| `vpc_network_name` | - | `default` | Direct VPC egressで使用するVPCネットワーク名 |
+| `vpc_subnetwork_name` | - | `default` | Direct VPC egressで使用するリージョナルサブネット名 |
 | `db_instance_name` | - | `regional-revitalization-db` | Cloud SQLインスタンス名 |
 | `db_tier` | - | `db-f1-micro` | Cloud SQLのマシンタイプ（コスト優先の共有コア） |
 | `db_name` | - | `regional_revitalization` | アプリケーション用DB名 |
@@ -152,7 +152,7 @@ design.mdの方針（GPU L4はus-central1でホスト）に合わせ、デフォ
 
 ## モジュール概要
 
-- `modules/network`: Serverless VPC Access コネクタ、およびCloud SQLの
+- `modules/network`: Direct VPC egress、およびCloud SQLの
   プライベートIP接続に必要なPrivate Services Access(VPCピアリング)
 - `modules/cloudsql`: Cloud SQL for PostgreSQLインスタンス（プライベートIPのみ、
   `google_ml_integration`拡張有効化フラグ）、DB/ユーザー作成、
@@ -201,7 +201,7 @@ GitHub Secrets/Variablesの設定）の詳細は`docs/deployment-guide.md`を参
 - Cloud SQLは共有コア`db-f1-micro`、ZONAL、PITR無効（通常バックアップは有効）
 - 同期ジョブは最大再試行0、タイムアウト15分、既定スケジュールは1日1回
 - `places_api_enabled=false`ではSchedulerを停止する
-- Serverless VPC AccessはGCP制約上`min_instances=2`、`max_instances=3`を使用する
+- Serverless VPC Access Connectorは使用せず、常時稼働VMのないDirect VPC egressを使用する
 
 ## コーディング規約
 

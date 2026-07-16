@@ -33,7 +33,7 @@ resource "google_sql_database_instance" "instance" {
     ip_configuration {
       # パブリックIPを無効化し、VPC経由のプライベートIP接続のみを許可する
       # （design.md Security Considerations: 「Cloud SQL Auth Proxyまたは
-      # プライベートIP + VPCコネクタ経由で接続し、パブリックIPを無効化する」）
+      # プライベートIP + Direct VPC egress経由で接続し、パブリックIPを無効化する」）
       ipv4_enabled    = false
       private_network = var.network_self_link
       ssl_mode        = "ENCRYPTED_ONLY"
