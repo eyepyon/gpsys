@@ -400,7 +400,7 @@ class _AsyncToSyncVacantPropertyRepository:
         self,
         location: GeoPoint,
         radius_km: float,
-        business_status: BusinessStatus,
+        business_status: BusinessStatus | None,
         types: list[str] | None,
         limit: int,
     ) -> list[Any]:

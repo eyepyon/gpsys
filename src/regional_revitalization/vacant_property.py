@@ -233,13 +233,14 @@ class VacantPropertyRepository(Protocol):
         self,
         location: GeoPoint,
         radius_km: float,
-        business_status: BusinessStatus,
+        business_status: BusinessStatus | None,
         types: list[str] | None,
         limit: int,
     ) -> list[VacantPropertyCandidate]:
         """`location`から半径`radius_km`以内かつ、指定した`business_status`に
 
         一致し、`types`が指定されている場合はそのいずれかのタグを含む候補を返す。
+        `business_status`がNoneの場合は営業状態で絞り込まない。
         """
         ...
 
@@ -306,7 +307,7 @@ class InMemoryVacantPropertyRepository:
         self,
         location: GeoPoint,
         radius_km: float,
-        business_status: BusinessStatus,
+        business_status: BusinessStatus | None,
         types: list[str] | None,
         limit: int,
     ) -> list[VacantPropertyCandidate]:
@@ -320,7 +321,7 @@ class InMemoryVacantPropertyRepository:
         candidates = [
             candidate
             for candidate in self._candidates_by_place_id.values()
-            if candidate.business_status == business_status
+            if (business_status is None or candidate.business_status == business_status)
             and haversine_distance_km(location, candidate.location) <= radius_km
         ]
 
@@ -401,7 +402,7 @@ def search_vacant_properties(
     vacant_property_repository: VacantPropertyRepository,
     location: GeoPoint,
     radius_km: float,
-    business_status: BusinessStatus,
+    business_status: BusinessStatus | None,
     types: list[str] | None,
     limit: int,
 ) -> list[VacantPropertyCandidate]:

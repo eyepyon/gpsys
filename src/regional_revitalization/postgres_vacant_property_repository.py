@@ -128,7 +128,7 @@ class PostgresVacantPropertyRepository:
         self,
         location: GeoPoint,
         radius_km: float,
-        business_status: BusinessStatus,
+        business_status: BusinessStatus | None,
         types: list[str] | None,
         limit: int,
     ) -> list[VacantPropertyCandidate]:
@@ -164,7 +164,7 @@ class PostgresVacantPropertyRepository:
                 ST_MakePoint($1, $2)::geography,
                 $3
             )
-            AND business_status = $4
+            AND ($4::text IS NULL OR business_status = $4)
             AND ($5::text[] IS NULL OR types && $5::text[])
             ORDER BY location <-> ST_MakePoint($1, $2)::geography
             LIMIT $6
@@ -177,7 +177,7 @@ class PostgresVacantPropertyRepository:
             location.longitude,
             location.latitude,
             radius_km * 1000.0,
-            business_status.value,
+            business_status.value if business_status is not None else None,
             types,
             limit,
         )

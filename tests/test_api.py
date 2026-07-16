@@ -285,13 +285,17 @@ class TestSearchVacantProperties:
         }
 
     def _make_candidate(
-        self, place_id: str = "place-1", latitude: float = 35.4, longitude: float = 138.9
+        self,
+        place_id: str = "place-1",
+        latitude: float = 35.4,
+        longitude: float = 138.9,
+        business_status: BusinessStatus = BusinessStatus.CLOSED_PERMANENTLY,
     ) -> VacantPropertyCandidate:
         return VacantPropertyCandidate(
             place_id=place_id,
             name="旧店舗",
             location=GeoPoint(latitude=latitude, longitude=longitude),
-            business_status=BusinessStatus.CLOSED_PERMANENTLY,
+            business_status=business_status,
             types=["restaurant"],
             address="山梨県某市1-1",
             phone_number="055-000-0000",
@@ -319,6 +323,25 @@ class TestSearchVacantProperties:
         assert "candidates" in body
         assert len(body["candidates"]) == 1
         assert body["candidates"][0]["place_id"] == "place-1"
+
+    def test_business_status未指定時は営業状態で絞り込まない(
+        self, client: TestClient
+    ) -> None:
+        candidates = [
+            self._make_candidate("closed"),
+            self._make_candidate("open", business_status=BusinessStatus.OPERATIONAL),
+        ]
+        set_vacant_property_repository(InMemoryVacantPropertyRepository(candidates))
+        payload = self._valid_payload()
+        payload.pop("business_status")
+
+        response = client.post("/vacant-properties/search", json=payload)
+
+        assert response.status_code == 200
+        assert {item["place_id"] for item in response.json()["candidates"]} == {
+            "closed",
+            "open",
+        }
 
     @pytest.mark.parametrize("radius_km", [0.0, -1.0, -5.0])
     def test_radius_kmが0以下の場合400を返す(

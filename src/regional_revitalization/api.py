@@ -529,9 +529,9 @@ class VacantPropertySearchRequestBody(BaseModel):
     latitude: float = Field(..., description="検索基準位置の緯度")
     longitude: float = Field(..., description="検索基準位置の経度")
     radius_km: float = Field(..., description="検索半径（キロメートル）")
-    business_status: BusinessStatus = Field(
-        ...,
-        description="絞り込み対象の営業状態"
+    business_status: BusinessStatus | None = Field(
+        default=None,
+        description="絞り込み対象の営業状態。未指定の場合は営業状態で絞り込まない"
         "（OPERATIONAL/CLOSED_TEMPORARILY/CLOSED_PERMANENTLY）",
     )
     types: list[str] | None = Field(

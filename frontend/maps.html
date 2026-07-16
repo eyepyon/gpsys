@@ -98,7 +98,7 @@ transform: rotate(45deg);
 }
 </style>
 </head>
-<body class="bg-white">
+<body class="bg-white" data-search-view="map">
 
 <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 h-16">
 <div class="h-full px-6 flex items-center justify-between">
@@ -109,7 +109,7 @@ transform: rotate(45deg);
 </div>
 <span class="text-sm font-medium">検索に戻る</span>
 </a>
-<span class="font-['Pacifico'] text-2xl text-primary">logo</span>
+<a href="/" aria-label="いぬきんじょ ホーム"><img src="./img/inulogosimple_c.png" alt="いぬきんじょ" class="h-10 w-auto object-contain"></a>
 </div>
 <button class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
 </div>
@@ -119,7 +119,7 @@ transform: rotate(45deg);
 <aside class="w-80 bg-white border-r border-gray-200 overflow-y-auto">
 <div class="p-6">
 <h2 class="text-xl font-bold text-gray-900 mb-2">物件を絞り込む</h2>
-<p class="text-sm text-gray-600 mb-6">該当物件: 1,234 件</p>
+<p id="search-result-count" class="text-sm text-gray-600 mb-6">検索条件を入力してください</p>
 
 <div class="mb-8">
 <h3 class="text-base font-bold text-gray-900 mb-4">エリア</h3>
@@ -249,7 +249,7 @@ transform: rotate(45deg);
 </div>
 </aside>
 
-<main class="flex-1 relative">
+<main id="map-results" class="flex-1 relative">
 <div class="absolute inset-0" style="background-image: url('./img/map_placeholder_1280x720.png'); background-size: cover; background-position: center;">
 <div class="map-pin absolute" style="top: 28%; left: 35%;" data-property="1">
 <div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full shadow-lg">
@@ -447,5 +447,6 @@ closePopup();
 });
 </script>
 
+<script src="vacant-search.js"></script>
 </body>
 </html>

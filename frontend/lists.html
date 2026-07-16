@@ -107,12 +107,12 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 }
 </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50" data-search-view="list">
 
 <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
 <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 <div class="flex items-center">
-<a href="/" data-readdy="true" class="font-['Pacifico'] text-2xl text-primary">logo</a>
+<a href="/" data-readdy="true" aria-label="いぬきんじょ ホーム"><img src="./img/inulogosimple_c.png" alt="いぬきんじょ" class="h-10 w-auto object-contain"></a>
 </div>
 <nav class="flex items-center gap-8">
 <a href="/" data-readdy="true" class="text-gray-700 hover:text-primary transition-colors text-sm">ホームに戻る</a>
@@ -154,7 +154,7 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 <div class="max-w-7xl mx-auto px-6 py-4">
 <div class="flex items-center justify-between">
 <div class="text-gray-700 text-sm">
-<span class="font-bold text-gray-900">東京都渋谷区 × 飲食店</span> で <span class="font-bold text-primary">1,247 件</span>の物件が見つかりました
+<span class="font-bold text-gray-900">検索結果</span>: <span id="list-search-result-count" class="font-bold text-primary">条件を入力してください</span>
 </div>
 <div class="flex items-center gap-4">
 <div class="flex bg-gray-100 rounded-lg p-1">
@@ -270,7 +270,7 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 
 <div class="flex-1">
 <div id="listView">
-<div class="grid grid-cols-3 gap-6 mb-8">
+<div id="search-result-grid" class="grid grid-cols-3 gap-6 mb-8">
 <div class="bg-white rounded-2xl shadow-sm overflow-hidden property-card">
 <div class="relative">
 <img src="./img/02f51e93ce69331cd09f9f0248dfc9d0.jpg" alt="物件写真" class="w-full h-48 object-cover object-top">
@@ -833,5 +833,6 @@ behavior: 'smooth'
 });
 </script>
 
+<script src="vacant-search.js"></script>
 </body>
 </html>

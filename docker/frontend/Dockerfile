@@ -15,6 +15,9 @@ FROM nginx:1.27-alpine
 
 COPY frontend/index.html /usr/share/nginx/html/index.html
 COPY frontend/demo.html /usr/share/nginx/html/demo.html
+COPY frontend/maps.html /usr/share/nginx/html/maps.html
+COPY frontend/lists.html /usr/share/nginx/html/lists.html
+COPY frontend/vacant-search.js /usr/share/nginx/html/vacant-search.js
 COPY frontend/terms.html /usr/share/nginx/html/terms.html
 COPY frontend/privacy.html /usr/share/nginx/html/privacy.html
 COPY frontend/faq.html /usr/share/nginx/html/faq.html
