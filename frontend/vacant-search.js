@@ -4,15 +4,14 @@
   const view = document.body.dataset.searchView;
   if (!view) return;
 
-  const savedBaseUrl = localStorage.getItem('inukinjoApiBaseUrl') || '';
+  const apiBaseUrl = 'https://regional-revitalization-api-dev-804626259225.us-central1.run.app';
+  const selectedTypes = new URLSearchParams(window.location.search).get('types') || '';
   const panel = document.createElement('section');
   panel.className = 'fixed left-1/2 -translate-x-1/2 top-20 z-[60] bg-white shadow-xl border border-gray-200 rounded-xl p-4';
   panel.style.width = 'min(920px, calc(100vw - 2rem))';
   panel.innerHTML = `
     <form id="vacant-search-form" class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
-      <label class="col-span-2 text-xs text-gray-600">APIRun URL
-        <input id="search-api-url" type="url" required value="${escapeHtml(savedBaseUrl)}" placeholder="https://...a.run.app" class="mt-1 w-full px-3 py-2 border rounded-lg text-sm">
-      </label>
+      <input id="search-api-url" type="hidden" value="${escapeHtml(apiBaseUrl)}">
       <label class="text-xs text-gray-600">緯度
         <input id="search-lat" type="number" required min="-90" max="90" step="any" value="35.68" class="mt-1 w-full px-3 py-2 border rounded-lg text-sm">
       </label>
@@ -23,7 +22,7 @@
         <input id="search-radius" type="number" required min="0.1" step="0.1" value="5" class="mt-1 w-full px-3 py-2 border rounded-lg text-sm">
       </label>
       <label class="text-xs text-gray-600">業種タグ（任意）
-        <input id="search-types" type="text" placeholder="restaurant,cafe" class="mt-1 w-full px-3 py-2 border rounded-lg text-sm">
+        <input id="search-types" type="text" value="${escapeHtml(selectedTypes)}" placeholder="restaurant,cafe" class="mt-1 w-full px-3 py-2 border rounded-lg text-sm">
       </label>
       <button id="vacant-search-button" type="submit" class="col-span-2 md:col-span-6 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg">営業状態を問わず検索</button>
       <p id="vacant-search-message" class="col-span-2 md:col-span-6 text-sm text-gray-600" aria-live="polite"></p>
@@ -46,7 +45,6 @@
       limit: 100
     };
 
-    localStorage.setItem('inukinjoApiBaseUrl', baseUrl);
     message.textContent = '検索中…';
     button.disabled = true;
     button.classList.add('opacity-60');

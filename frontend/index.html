@@ -58,7 +58,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 <a href="#howto" class="text-gray-700 hover:text-primary transition-colors text-sm">使い方</a>
 <a href="faq.html" class="text-gray-700 hover:text-primary transition-colors text-sm">よくある質問</a>
 <a href="contact.html" class="text-gray-700 hover:text-primary transition-colors text-sm">お問い合わせ</a>
-<a href="demo.html" class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">動作確認デモを試す</a>
+<a href="lists.html" class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">物件を検索する</a>
 </nav>
 </div>
 </header>
@@ -85,7 +85,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 <input type="text" placeholder="業種を選択（例：飲食店）" class="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-lg text-gray-700 text-sm focus:outline-none focus:border-primary">
 </div>
 </div>
-<a href="demo.html" class="block w-full py-4 bg-secondary text-white font-bold !rounded-button hover:bg-orange-600 transition-colors text-lg whitespace-nowrap text-center">
+<a href="lists.html" class="block w-full py-4 bg-secondary text-white font-bold !rounded-button hover:bg-orange-600 transition-colors text-lg whitespace-nowrap text-center">
 <span class="flex items-center justify-center gap-2">
 <span>検索する</span>
 <div class="w-5 h-5 flex items-center justify-center">
@@ -142,14 +142,14 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 <div class="bg-gray-50 rounded-2xl p-8 h-96 relative overflow-hidden">
 <img src="img/map_placeholder_1280x720.png" alt="マップ" class="absolute inset-0 w-full h-full object-cover object-center">
 <div class="absolute inset-0 flex items-center justify-center">
-<button class="px-8 py-4 bg-white text-primary font-bold !rounded-button shadow-lg hover:shadow-xl transition-all whitespace-nowrap">
+<a href="maps.html" class="px-8 py-4 bg-white text-primary font-bold !rounded-button shadow-lg hover:shadow-xl transition-all whitespace-nowrap">
 <span class="flex items-center gap-2">
 <div class="w-5 h-5 flex items-center justify-center">
 <i class="ri-map-pin-line text-xl"></i>
 </div>
 <span>マップから検索する</span>
 </span>
-</button>
+</a>
 </div>
 </div>
 <h3 class="text-2xl font-bold text-gray-900 mt-6 mb-3">インタラクティブマップ検索</h3>
@@ -157,48 +157,48 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 </div>
 <div>
 <div class="grid grid-cols-2 gap-4">
-<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+<a href="maps.html?types=restaurant" class="block bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
 <div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
 <i class="ri-restaurant-line text-2xl text-primary"></i>
 </div>
 <h4 class="font-bold text-gray-900 mb-2">飲食店</h4>
 <p class="text-sm text-gray-600">2,847 件</p>
-</div>
-<div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+</a>
+<a href="maps.html?types=beauty_salon" class="block bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
 <div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
 <i class="ri-scissors-cut-line text-2xl text-secondary"></i>
 </div>
 <h4 class="font-bold text-gray-900 mb-2">美容室</h4>
 <p class="text-sm text-gray-600">1,523 件</p>
-</div>
-<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+</a>
+<a href="maps.html?types=doctor" class="block bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
 <div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
 <i class="ri-hospital-line text-2xl text-green-600"></i>
 </div>
 <h4 class="font-bold text-gray-900 mb-2">クリニック</h4>
 <p class="text-sm text-gray-600">892 件</p>
-</div>
-<div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+</a>
+<a href="maps.html?types=corporate_office" class="block bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
 <div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
 <i class="ri-building-line text-2xl text-purple-600"></i>
 </div>
 <h4 class="font-bold text-gray-900 mb-2">オフィス</h4>
 <p class="text-sm text-gray-600">1,156 件</p>
-</div>
-<div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+</a>
+<a href="maps.html?types=store" class="block bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
 <div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
 <i class="ri-shopping-bag-line text-2xl text-pink-600"></i>
 </div>
 <h4 class="font-bold text-gray-900 mb-2">小売店</h4>
 <p class="text-sm text-gray-600">1,734 件</p>
-</div>
-<div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
+</a>
+<a href="maps.html?types=establishment" class="block bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer">
 <div class="w-12 h-12 flex items-center justify-center bg-white rounded-xl mb-4">
 <i class="ri-service-line text-2xl text-yellow-600"></i>
 </div>
 <h4 class="font-bold text-gray-900 mb-2">サービス業</h4>
 <p class="text-sm text-gray-600">2,091 件</p>
-</div>
+</a>
 </div>
 <h3 class="text-2xl font-bold text-gray-900 mt-6 mb-3">人気業種カテゴリー</h3>
 <p class="text-gray-600">100 種類以上の業種から、あなたのビジネスに最適な物件を見つけられます。</p>
@@ -257,7 +257,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 </div>
 <h2 class="text-5xl font-bold text-white mb-6">利用は無料です</h2>
 <p class="text-xl text-white opacity-95 mb-10 leading-relaxed">会員登録から物件検索、お気に入り登録、問い合わせまで<br>全ての機能を無料でご利用いただけます</p>
-<a href="demo.html" class="inline-block px-12 py-5 bg-white text-secondary font-bold !rounded-button hover:bg-gray-50 transition-colors text-lg shadow-xl whitespace-nowrap">
+<a href="lists.html" class="inline-block px-12 py-5 bg-white text-secondary font-bold !rounded-button hover:bg-gray-50 transition-colors text-lg shadow-xl whitespace-nowrap">
 <span class="flex items-center justify-center gap-3">
 <span>今すぐはじめる</span>
 <div class="w-6 h-6 flex items-center justify-center">
@@ -272,13 +272,13 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 <div class="max-w-7xl mx-auto px-6">
 <div class="grid grid-cols-4 gap-12 mb-12">
 <div>
-<a href="index.html"><div class="font-['Pacifico'] text-2xl text-white mb-4">logo</div></a>
+<a href="index.html"><img src="./img/inulogosimple_c.png" alt="いぬきんじょ" class="h-10 w-auto object-contain mb-4"></a>
 <p class="text-sm leading-relaxed">居抜き物件候補検索サービス「いぬきんじょ」は、あなたの出店を全力でサポートします。</p>
 </div>
 <div>
 <h4 class="text-white font-bold mb-4">サービス</h4>
 <ul class="space-y-2 text-sm">
-<li><a href="demo.html" class="hover:text-white transition-colors">物件検索（動作確認デモ）</a></li>
+<li><a href="lists.html" class="hover:text-white transition-colors">物件検索</a></li>
 </ul>
 </div>
 <div>
@@ -300,10 +300,10 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hi
 <div class="flex items-center justify-between">
 <p class="text-sm">&copy; 2026 いぬきんじょ. All rights reserved.</p>
 <div class="flex items-center gap-4">
-<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<a href="https://x.com/masafumiaida" target="_blank" rel="noopener noreferrer" aria-label="X" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
 <i class="ri-twitter-x-line text-lg"></i>
 </a>
-<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<a href="https://www.facebook.com/masafumiaida" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
 <i class="ri-facebook-fill text-lg"></i>
 </a>
 <a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
