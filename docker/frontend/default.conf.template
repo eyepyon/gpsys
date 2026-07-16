@@ -2,6 +2,23 @@ server {
     listen       ${PORT};
     server_name  _;
 
+    # ブラウザからは同一オリジンの/apiを呼び、nginxがAPIRunへ中継する。
+    # APIRunの500応答にCORSヘッダーが無い場合でもブラウザで応答を扱える。
+    location /api/ {
+        proxy_pass https://regional-revitalization-api-dev-804626259225.us-central1.run.app/;
+        proxy_ssl_server_name on;
+        proxy_ssl_name regional-revitalization-api-dev-804626259225.us-central1.run.app;
+        proxy_set_header Host regional-revitalization-api-dev-804626259225.us-central1.run.app;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 60s;
+    }
+
+    location = /favicon.ico {
+        return 302 /favicon.svg;
+    }
+
     location / {
         root   /usr/share/nginx/html;
         index  index.html;

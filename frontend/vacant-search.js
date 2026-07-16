@@ -4,7 +4,7 @@
   const view = document.body.dataset.searchView;
   if (!view) return;
 
-  const apiBaseUrl = 'https://regional-revitalization-api-dev-804626259225.us-central1.run.app';
+  const apiBaseUrl = '/api';
   const selectedTypes = new URLSearchParams(window.location.search).get('types') || '';
   const panel = document.createElement('section');
   panel.className = 'fixed left-1/2 -translate-x-1/2 top-20 z-[60] bg-white shadow-xl border border-gray-200 rounded-xl p-4';
@@ -41,7 +41,7 @@
   form.addEventListener('submit', search);
   document.getElementById('toggle-search-panel').addEventListener('click', toggleSearchPanel);
   document.getElementById('get-current-location').addEventListener('click', getCurrentLocation);
-  if (view === 'map') setupPlaceTypeSelector();
+  if (view === 'map' || view === 'list') setupPlaceTypeSelector();
   if (view === 'list') {
     const grid = document.getElementById('search-result-grid');
     const pagination = document.getElementById('search-pagination');
@@ -57,6 +57,9 @@
     const minimized = !form.classList.contains('hidden');
     form.classList.toggle('hidden', minimized);
     panel.style.width = minimized ? 'auto' : 'min(920px, calc(100vw - 2rem))';
+    panel.style.left = minimized ? 'auto' : '50%';
+    panel.style.right = minimized ? '1rem' : 'auto';
+    panel.style.transform = minimized ? 'none' : 'translateX(-50%)';
     button.setAttribute('aria-expanded', String(!minimized));
     label.textContent = minimized ? '元に戻す' : '最小化';
     icon.className = minimized ? 'ri-expand-diagonal-line' : 'ri-subtract-line';
@@ -87,7 +90,7 @@
       <section><h4 class="text-xs font-bold text-gray-500 mb-2">${escapeHtml(group)}</h4>
       <div class="grid grid-cols-1 gap-2">${types.map(type => `
         <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-          <input type="checkbox" class="custom-checkbox place-type-checkbox" value="${escapeHtml(type)}">
+          <input type="checkbox" class="${view === 'list' ? 'checkbox-custom' : 'custom-checkbox'} place-type-checkbox" value="${escapeHtml(type)}">
           <span>${escapeHtml(labels[type] || type.replaceAll('_', ' '))}</span>
         </label>`).join('')}</div></section>`).join('');
 
@@ -175,12 +178,12 @@
       render(candidates);
     } catch (error) {
       console.error('物件情報の取得に失敗しました', error);
-      message.textContent = '現在コスト対策のためAPIを一時停止しています';
+      message.textContent = '現在コスト対策のため一部APIを一時停止しています';
       if (view === 'list') {
         const grid = document.getElementById('search-result-grid');
         const pagination = document.getElementById('search-pagination');
         if (pagination) pagination.classList.add('hidden');
-        if (grid) grid.innerHTML = '<p class="col-span-3 py-12 text-center font-bold text-red-600">現在コスト対策のためAPIを一時停止しています</p>';
+        if (grid) grid.innerHTML = '<p class="col-span-3 py-12 text-center font-bold text-red-600">現在コスト対策のため一部APIを一時停止しています</p>';
       }
     } finally {
       button.disabled = false;

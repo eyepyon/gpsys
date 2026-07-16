@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>検索結果 - いぬきんじょ</title>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -115,8 +116,7 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 <a href="/" data-readdy="true" aria-label="いぬきんじょ ホーム"><img src="./img/inulogosimple_c.png" alt="いぬきんじょ" class="h-10 w-auto object-contain"></a>
 </div>
 <nav class="flex items-center gap-8">
-<a href="/" data-readdy="true" class="text-gray-700 hover:text-primary transition-colors text-sm">ホームに戻る</a>
-<a href="#" class="text-gray-700 hover:text-primary transition-colors text-sm">お気に入り</a>
+<p class="text-sm font-bold text-red-600">現在コスト対策のため一部APIを一時停止しています</p>
 <button type="button" onclick="alert('現バージョンでは未対応です')" class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
 </nav>
 </div>
@@ -189,14 +189,15 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 <h3 class="text-lg font-bold text-gray-900 mb-6">絞り込み条件</h3>
 <div class="space-y-6">
 <div>
-<label class="block text-sm font-bold text-gray-900 mb-3">賃料（月額）</label>
-<div class="space-y-3">
-<input type="range" min="0" max="1000000" step="10000" value="500000" class="w-full">
-<div class="flex items-center gap-3">
-<input type="text" value="¥0" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
-<span class="text-gray-400">〜</span>
-<input type="text" value="¥1,000,000" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary">
-</div>
+<label class="block text-sm font-bold text-gray-900 mb-3">業種</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="checkbox-custom place-type-checkbox" value="restaurant"><span class="text-sm text-gray-700">飲食店</span></label>
+<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="checkbox-custom place-type-checkbox" value="beauty_salon"><span class="text-sm text-gray-700">美容室</span></label>
+<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="checkbox-custom place-type-checkbox" value="doctor"><span class="text-sm text-gray-700">クリニック</span></label>
+<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="checkbox-custom place-type-checkbox" value="corporate_office"><span class="text-sm text-gray-700">オフィス</span></label>
+<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="checkbox-custom place-type-checkbox" value="store"><span class="text-sm text-gray-700">小売店</span></label>
+<button id="toggle-place-types" type="button" class="text-sm text-primary hover:text-blue-700 font-medium mt-2">+ 他の業種を表示</button>
+<div id="additional-place-types" class="hidden mt-4 space-y-4 max-h-96 overflow-y-auto"></div>
 </div>
 </div>
 
