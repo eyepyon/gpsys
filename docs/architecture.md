@@ -145,8 +145,8 @@ sequenceDiagram
     participant API as APIRun (アプリ本体)
     participant DB as CloudSQL (PostGIS)
 
-    U->>API: 居抜き物件検索リクエスト(位置情報, 半径, business_status, 業種タグ, limit)
-    API->>DB: search_by_business_status_and_type(location, radius_km, business_status, types, limit)<br/>ST_DWithinで地理的絞り込み + business_status一致 + types配列の重なり判定(&&演算子等)
+    U->>API: 居抜き物件検索リクエスト(位置情報, 半径, 任意のbusiness_status, 業種タグ, limit)
+    API->>DB: search_by_business_status_and_type(location, radius_km, business_status, types, limit)<br/>ST_DWithinで地理的絞り込み + 指定時のみbusiness_status一致 + types配列の重なり判定(&&演算子等)
     DB-->>API: 条件に合致する居抜き物件候補リスト
     API-->>U: 居抜き物件候補一覧(旧店舗名, 業種タグ, 推定廃業時期レンジ等)
 ```

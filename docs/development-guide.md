@@ -114,10 +114,11 @@ Cloud SQL・Cloud Storage・Places API等、外部リソースに依存する実
 
 ## コンテナイメージのローカルビルド
 
-各サービスのDockerfileは`docker/`ディレクトリに配置されています（`docker/api/`, `docker/infer/`, `docker/vacant_sync/`）。ローカルでビルドを確認する場合はリポジトリルートで以下を実行します（Docker CLIが必要です）。
+各サービスのDockerfileは`docker/`ディレクトリに配置されています（`docker/api/`, `docker/infer/`, `docker/vacant_sync/`, `docker/frontend/`）。ローカルでビルドを確認する場合はリポジトリルートで以下を実行します（Docker CLIが必要です）。
 
 ```bash
 docker build -f docker/api/Dockerfile -t regional-revitalization-api:local .
+docker build -f docker/frontend/Dockerfile -t inuki-frontend:local .
 ```
 
 GCPへのイメージのプッシュ、Terraformとの連携、GitHub ActionsによるCI/CDの詳細は[deployment-guide.md](./deployment-guide.md)を参照してください。

@@ -87,7 +87,7 @@ FastAPIアプリケーション（`app = FastAPI(...)`、`src/regional_revitaliz
 
 ### POST /vacant-properties/search — 居抜き物件の検索
 
-位置・営業状態・業種タグで居抜き物件候補を検索します。
+位置・任意の営業状態・業種タグで居抜き物件候補を検索します。
 
 **リクエストボディ**
 
@@ -96,7 +96,7 @@ FastAPIアプリケーション（`app = FastAPI(...)`、`src/regional_revitaliz
 | `latitude` | float | ○ | - | 検索基準位置の緯度 |
 | `longitude` | float | ○ | - | 検索基準位置の経度 |
 | `radius_km` | float | ○ | - | 検索半径（キロメートル、正の数） |
-| `business_status` | string | ○ | - | `OPERATIONAL` / `CLOSED_TEMPORARILY` / `CLOSED_PERMANENTLY`のいずれか |
+| `business_status` | string \| null | - | null | 指定時は`OPERATIONAL` / `CLOSED_TEMPORARILY` / `CLOSED_PERMANENTLY`のいずれか。未指定時は営業状態で絞り込まない |
 | `types` | string[] \| null | - | null | 業種・ジャンルタグによる絞り込み条件（指定時は候補のtypesと積集合が空でないもののみ返す） |
 | `limit` | int | - | 10 | 取得件数の上限 |
 
@@ -115,7 +115,11 @@ FastAPIアプリケーション（`app = FastAPI(...)`、`src/regional_revitaliz
       "address": "住所または null",
       "phone_number": "電話番号または null",
       "estimated_closure_period_start": "2024-01-01T00:00:00 または null",
-      "estimated_closure_period_end": "2024-01-10T00:00:00 または null"
+      "estimated_closure_period_end": "2024-01-10T00:00:00 または null",
+      "rent_yen": null,
+      "area_sqm": null,
+      "built_year": null,
+      "structure": null
     }
   ]
 }

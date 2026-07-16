@@ -1,7 +1,7 @@
 # 動作確認用フロント画面（inuki）配信用コンテナイメージ。
 #
-# frontend/index.html（単一の静的HTMLファイル）をnginxで配信するだけの
-# 最小構成。ビルドツールやフレームワークは使用していない。
+# frontend配下の公開HTML・画像・共通JavaScriptをnginxで配信する構成。
+# /api/はAPIRunへリバースプロキシし、ブラウザのCORS依存を避ける。
 #
 # ビルドコンテキストはリポジトリルート（`docker build -f docker/frontend/Dockerfile .`）を
 # 想定する。

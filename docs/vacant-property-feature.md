@@ -101,7 +101,7 @@ Google Places APIの利用規約には以下の制約があります。
 
 ## 検索機能（search_vacant_properties）
 
-`search_vacant_properties(vacant_property_repository, location, radius_km, business_status, types, limit)`関数（`vacant_property.py`）で、位置・営業状態・業種タグによる絞り込み検索を提供します。HTTP API経由での利用は[api-reference.md](./api-reference.md)の`POST /vacant-properties/search`を参照してください。
+`search_vacant_properties(vacant_property_repository, location, radius_km, business_status, types, limit)`関数（`vacant_property.py`）で、位置・任意の営業状態・業種タグによる絞り込み検索を提供します。`business_status=None`では営業状態を問わず検索します。HTTP API経由での利用は[api-reference.md](./api-reference.md)の`POST /vacant-properties/search`を参照してください。
 
 **検証される正当性（Property-Based Testingで検証済み）**:
 

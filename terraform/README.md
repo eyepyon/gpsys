@@ -74,7 +74,7 @@ terraform/
 | `inference_service_name` | - | `inuki-gemma4` | InferRun(Gemma 4搭載)のCloud Runサービス名 |
 | `inference_image` | ○ | - | InferRunのコンテナイメージURL |
 | `frontend_service_name` | - | `inuki` | 動作確認用フロント画面(inuki)のCloud Runサービス名 |
-| `frontend_image` | ○ | - | inukiのコンテナイメージURL(nginxで`frontend/index.html`を配信) |
+| `frontend_image` | ○ | - | inukiのコンテナイメージURL（公開HTML・画像・共通JSをnginxで配信し、`/api/`をAPIRunへ中継） |
 | `admin_initial_username` | - | `admin` | 管理画面(/admin/)の初回管理者アカウントのログインID |
 | `admin_initial_password` | ○（機密） | - | 管理画面の初回管理者アカウントのパスワード(8文字以上) |
 | `admin_places_api_key` | - | `""` | 管理画面の「この場所でGoogle Places APIを検索する」機能用APIキー。空文字列の場合は機能無効(モッククライアントのまま動作) |
@@ -193,6 +193,15 @@ Secrets（`secrets.*`）から参照する。
 
 初回セットアップ手順（tfstateと地域資源ファイル共用バケットの作成、WIFの有効化、
 GitHub Secrets/Variablesの設定）の詳細は`docs/deployment-guide.md`を参照すること。
+
+## コスト優先の既定値
+
+- APIRun・フロント・InferRunは最小インスタンス0、最大1（未使用時はスケールゼロ）
+- InferRunのGPUはリクエスト時のみ起動するため、コールドスタートが発生する
+- Cloud SQLは共有コア`db-f1-micro`、ZONAL、PITR無効（通常バックアップは有効）
+- 同期ジョブは最大再試行0、タイムアウト15分、既定スケジュールは1日1回
+- `places_api_enabled=false`ではSchedulerを停止する
+- Serverless VPC AccessはGCP制約上`min_instances=2`、`max_instances=3`を使用する
 
 ## コーディング規約
 

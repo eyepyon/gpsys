@@ -1,7 +1,7 @@
 name: Deploy
 
 # mainブランチへのpush（マージ）をトリガーに、以下を行う。
-#   1. APIRun / InferRun / 居抜き物件同期サービスの3つのコンテナイメージを
+#   1. APIRun / InferRun / 居抜き物件同期サービス / フロントの4つのコンテナイメージを
 #      ビルドし、Artifact Registryへプッシュする
 #   2. Terraformを適用し、Cloud Run / Cloud Run Jobs / Cloud SQL等を
 #      最新のイメージ・構成で更新する
