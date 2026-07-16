@@ -69,15 +69,15 @@ variable "vacant_sync_image" {
 }
 
 variable "vpc_network_name" {
-  description = "VPCコネクタを作成する対象VPCネットワーク名"
+  description = "Cloud Run Direct VPC egressとCloud SQLプライベート接続に使用するVPCネットワーク名"
   type        = string
   default     = "default"
 }
 
-variable "vpc_connector_cidr" {
-  description = "VPCアクセスコネクタに割り当てるCIDR範囲（/28を指定すること）"
+variable "vpc_subnetwork_name" {
+  description = "Cloud Run Direct VPC egressで使用するリージョナルサブネットワーク名"
   type        = string
-  default     = "10.8.0.0/28"
+  default     = "default"
 }
 
 variable "db_instance_name" {

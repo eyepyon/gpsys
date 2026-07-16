@@ -14,17 +14,6 @@ data "google_compute_network" "vpc" {
   name    = var.network_name
 }
 
-# Cloud Run ⇔ VPC間の接続用（Serverless VPC Access）
-resource "google_vpc_access_connector" "connector" {
-  name          = var.connector_name
-  project       = var.project_id
-  region        = var.region
-  network       = var.network_name
-  ip_cidr_range = var.ip_cidr_range
-  min_instances = var.min_instances
-  max_instances = var.max_instances
-}
-
 # Cloud SQLのプライベートIP接続に必要なIPレンジ（Private Services Access用）
 resource "google_compute_global_address" "private_ip_range" {
   project       = var.project_id

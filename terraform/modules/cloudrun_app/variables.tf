@@ -30,8 +30,13 @@ variable "image" {
   type        = string
 }
 
-variable "vpc_connector_id" {
-  description = "Cloud SQLへのプライベート接続に使用するVPCアクセスコネクタのID"
+variable "vpc_network_name" {
+  description = "Direct VPC egressで接続するVPCネットワーク名"
+  type        = string
+}
+
+variable "vpc_subnetwork_name" {
+  description = "Direct VPC egressで接続するサブネットワーク名"
   type        = string
 }
 

@@ -30,8 +30,13 @@ variable "image" {
   type        = string
 }
 
-variable "vpc_connector_id" {
-  description = "VPCアクセスコネクタのID（必要に応じてモデル重みの取得元等への接続に使用）"
+variable "vpc_network_name" {
+  description = "Direct VPC egressで接続するVPCネットワーク名"
+  type        = string
+}
+
+variable "vpc_subnetwork_name" {
+  description = "Direct VPC egressで接続するサブネットワーク名"
   type        = string
 }
 

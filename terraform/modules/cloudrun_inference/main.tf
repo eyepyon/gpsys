@@ -46,8 +46,11 @@ resource "google_cloud_run_v2_service" "inference" {
     }
 
     vpc_access {
-      connector = var.vpc_connector_id
-      egress    = "PRIVATE_RANGES_ONLY"
+      network_interfaces {
+        network    = var.vpc_network_name
+        subnetwork = var.vpc_subnetwork_name
+      }
+      egress = "PRIVATE_RANGES_ONLY"
     }
 
     # GPUを使用する場合、リクエストの同時実行数を1に制限することが

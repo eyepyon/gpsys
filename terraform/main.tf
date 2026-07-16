@@ -77,18 +77,12 @@ module "github_actions_wif" {
   depends_on = [google_project_service.apis]
 }
 
-# --- network: VPCコネクタ + Private Services Access ---
+# --- network: Direct VPC egress + Private Services Access ---
 module "network" {
   source = "./modules/network"
 
-  project_id    = var.project_id
-  region        = var.region
-  network_name  = var.vpc_network_name
-  ip_cidr_range = var.vpc_connector_cidr
-  # VPCコネクタ名はGCPの制約で最大25文字（^[a-z][-a-z0-9]{0,23}[a-z0-9]$）。
-  # "regional-revit-connector-${var.environment}"（例: "regional-revit-connector-dev"）
-  # は29文字となり超過するため、短縮した名前を使用する。
-  connector_name = "rr-connector-${var.environment}"
+  project_id   = var.project_id
+  network_name = var.vpc_network_name
 
   depends_on = [google_project_service.apis]
 }
@@ -150,7 +144,8 @@ module "cloudrun_inference" {
   service_name                  = "${var.inference_service_name}-${var.environment}"
   service_account_id            = "infer-run-sa-${var.environment}"
   image                         = var.inference_image
-  vpc_connector_id              = module.network.connector_id
+  vpc_network_name              = var.vpc_network_name
+  vpc_subnetwork_name           = var.vpc_subnetwork_name
   invoker_service_account_email = google_service_account.app_run_sa.email
   labels                        = var.labels
 }
@@ -221,7 +216,8 @@ module "cloudrun_app" {
   service_name                     = "${var.app_service_name}-${var.environment}"
   service_account_email            = google_service_account.app_run_sa.email
   image                            = var.app_image
-  vpc_connector_id                 = module.network.connector_id
+  vpc_network_name                 = var.vpc_network_name
+  vpc_subnetwork_name              = var.vpc_subnetwork_name
   db_connection_secret_id          = module.cloudsql.db_connection_secret_id
   inference_service_url            = module.cloudrun_inference.service_url
   storage_bucket_name              = module.storage.bucket_name
@@ -262,7 +258,8 @@ module "vacant_property_sync" {
   region                  = var.region
   job_name                = "${var.vacant_sync_job_name}-${var.environment}"
   image                   = var.vacant_sync_image
-  vpc_connector_id        = module.network.connector_id
+  vpc_network_name        = var.vpc_network_name
+  vpc_subnetwork_name     = var.vpc_subnetwork_name
   db_connection_secret_id = module.cloudsql.db_connection_secret_id
   places_api_key          = var.places_api_key
   places_api_enabled      = var.places_api_enabled

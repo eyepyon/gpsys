@@ -69,8 +69,11 @@ resource "google_cloud_run_v2_job" "vacant_sync" {
       timeout         = var.task_timeout
 
       vpc_access {
-        connector = var.vpc_connector_id
-        egress    = "PRIVATE_RANGES_ONLY"
+        network_interfaces {
+          network    = var.vpc_network_name
+          subnetwork = var.vpc_subnetwork_name
+        }
+        egress = "PRIVATE_RANGES_ONLY"
       }
 
       containers {
