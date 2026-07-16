@@ -33,8 +33,7 @@ variable "min_instances" {
 }
 
 variable "max_instances" {
-  description = "VPCアクセスコネクタの最大インスタンス数"
+  description = "VPCアクセスコネクタの最大インスタンス数。Google Cloudの制約でmin_instancesより大きい値が必須"
   type        = number
-  # Google Cloudの制約でmin_instancesより大きい値が必須。
   default     = 3
 }
