@@ -111,11 +111,14 @@ transform: rotate(45deg);
 </a>
 <a href="/" aria-label="いぬきんじょ ホーム"><img src="./img/inulogosimple_c.png" alt="いぬきんじょ" class="h-10 w-auto object-contain"></a>
 </div>
-<button class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
+<div class="flex items-center gap-6">
+<p class="text-sm font-bold text-red-600">現在コスト対策のためAPIを一時停止しています</p>
+<button type="button" onclick="alert('現バージョンでは未対応です')" class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
+</div>
 </div>
 </header>
 
-<div class="fixed top-16 left-0 right-0 bottom-0 flex">
+<div class="mt-16 flex h-[calc(100vh-4rem)]">
 <aside class="w-80 bg-white border-r border-gray-200 overflow-y-auto">
 <div class="p-6">
 <h2 class="text-xl font-bold text-gray-900 mb-2">物件を絞り込む</h2>
@@ -163,7 +166,7 @@ transform: rotate(45deg);
 <h3 class="text-base font-bold text-gray-900 mb-4">業種</h3>
 <div class="space-y-3">
 <label class="flex items-center gap-3 cursor-pointer group">
-<input type="checkbox" class="custom-checkbox">
+<input type="checkbox" class="custom-checkbox place-type-checkbox" value="restaurant">
 <div class="w-5 h-5 flex items-center justify-center text-primary">
 <i class="ri-restaurant-line text-base"></i>
 </div>
@@ -171,7 +174,7 @@ transform: rotate(45deg);
 <span class="text-xs text-gray-500">847</span>
 </label>
 <label class="flex items-center gap-3 cursor-pointer group">
-<input type="checkbox" class="custom-checkbox">
+<input type="checkbox" class="custom-checkbox place-type-checkbox" value="beauty_salon">
 <div class="w-5 h-5 flex items-center justify-center text-secondary">
 <i class="ri-scissors-cut-line text-base"></i>
 </div>
@@ -179,7 +182,7 @@ transform: rotate(45deg);
 <span class="text-xs text-gray-500">523</span>
 </label>
 <label class="flex items-center gap-3 cursor-pointer group">
-<input type="checkbox" class="custom-checkbox">
+<input type="checkbox" class="custom-checkbox place-type-checkbox" value="doctor">
 <div class="w-5 h-5 flex items-center justify-center text-green-600">
 <i class="ri-hospital-line text-base"></i>
 </div>
@@ -187,7 +190,7 @@ transform: rotate(45deg);
 <span class="text-xs text-gray-500">192</span>
 </label>
 <label class="flex items-center gap-3 cursor-pointer group">
-<input type="checkbox" class="custom-checkbox">
+<input type="checkbox" class="custom-checkbox place-type-checkbox" value="corporate_office">
 <div class="w-5 h-5 flex items-center justify-center text-purple-600">
 <i class="ri-building-line text-base"></i>
 </div>
@@ -195,7 +198,7 @@ transform: rotate(45deg);
 <span class="text-xs text-gray-500">356</span>
 </label>
 <label class="flex items-center gap-3 cursor-pointer group">
-<input type="checkbox" class="custom-checkbox">
+<input type="checkbox" class="custom-checkbox place-type-checkbox" value="store">
 <div class="w-5 h-5 flex items-center justify-center text-pink-600">
 <i class="ri-shopping-bag-line text-base"></i>
 </div>
@@ -203,14 +206,15 @@ transform: rotate(45deg);
 <span class="text-xs text-gray-500">734</span>
 </label>
 <label class="flex items-center gap-3 cursor-pointer group">
-<input type="checkbox" class="custom-checkbox">
+<input type="checkbox" class="custom-checkbox place-type-checkbox" value="establishment">
 <div class="w-5 h-5 flex items-center justify-center text-yellow-600">
 <i class="ri-service-line text-base"></i>
 </div>
 <span class="text-sm text-gray-700 flex-1 group-hover:text-gray-900">サービス業</span>
 <span class="text-xs text-gray-500">591</span>
 </label>
-<button class="text-sm text-primary hover:text-blue-700 font-medium mt-2">+ 他の業種を表示 (100種類以上)</button>
+<button id="toggle-place-types" type="button" class="text-sm text-primary hover:text-blue-700 font-medium mt-2">+ 他の業種を表示</button>
+<div id="additional-place-types" class="hidden mt-4 space-y-4"></div>
 </div>
 </div>
 
@@ -347,6 +351,56 @@ transform: rotate(45deg);
 </div>
 </main>
 </div>
+
+<footer class="bg-gray-900 text-gray-300 py-16">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-4 gap-12 mb-12">
+<div>
+<a href="index.html"><img src="./img/inulogosimple_c.png" alt="いぬきんじょ" class="h-10 w-auto object-contain mb-4"></a>
+<p class="text-sm leading-relaxed">居抜き物件候補検索サービス「いぬきんじょ」は、あなたの出店を全力でサポートします。</p>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">サービス</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="lists.html" class="hover:text-white transition-colors">物件検索</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">サポート</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="faq.html" class="hover:text-white transition-colors">よくある質問</a></li>
+<li><a href="contact.html" class="hover:text-white transition-colors">お問い合わせ</a></li>
+</ul>
+</div>
+<div>
+<h4 class="text-white font-bold mb-4">法的情報</h4>
+<ul class="space-y-2 text-sm">
+<li><a href="terms.html" class="hover:text-white transition-colors">利用規約</a></li>
+<li><a href="privacy.html" class="hover:text-white transition-colors">プライバシーポリシー</a></li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-800 pt-8">
+<div class="flex items-center justify-between">
+<p class="text-sm">&copy; 2026 いぬきんじょ. All rights reserved.</p>
+<div class="flex items-center gap-4">
+<a href="https://x.com/masafumiaida" target="_blank" rel="noopener noreferrer" aria-label="X" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-twitter-x-line text-lg"></i>
+</a>
+<a href="https://www.facebook.com/masafumiaida" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors">
+<i class="ri-facebook-fill text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors" aria-label="Instagram">
+<i class="ri-instagram-line text-lg"></i>
+</a>
+<a href="#" class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-gray-700 transition-colors" aria-label="LINE">
+<i class="ri-line-fill text-lg"></i>
+</a>
+</div>
+</div>
+</div>
+</div>
+</footer>
 
 <script id="map-interaction">
 const properties = {

@@ -117,7 +117,7 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 <nav class="flex items-center gap-8">
 <a href="/" data-readdy="true" class="text-gray-700 hover:text-primary transition-colors text-sm">ホームに戻る</a>
 <a href="#" class="text-gray-700 hover:text-primary transition-colors text-sm">お気に入り</a>
-<button class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
+<button type="button" onclick="alert('現バージョンでは未対応です')" class="px-6 py-2.5 bg-primary text-white !rounded-button hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">ログイン / 会員登録</button>
 </nav>
 </div>
 </header>
@@ -709,27 +709,21 @@ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 
 <div>
 <h4 class="text-white font-bold mb-4">サービス</h4>
 <ul class="space-y-2 text-sm">
-<li><a href="#" class="hover:text-white transition-colors">物件検索</a></li>
-<li><a href="#" class="hover:text-white transition-colors">マップ検索</a></li>
-<li><a href="#" class="hover:text-white transition-colors">業種一覧</a></li>
-<li><a href="#" class="hover:text-white transition-colors">新着物件</a></li>
+<li><a href="lists.html" class="hover:text-white transition-colors">物件検索</a></li>
 </ul>
 </div>
 <div>
 <h4 class="text-white font-bold mb-4">サポート</h4>
 <ul class="space-y-2 text-sm">
-<li><a href="#" class="hover:text-white transition-colors">よくある質問</a></li>
-<li><a href="#" class="hover:text-white transition-colors">使い方ガイド</a></li>
-<li><a href="#" class="hover:text-white transition-colors">お問い合わせ</a></li>
-<li><a href="#" class="hover:text-white transition-colors">運営会社</a></li>
+<li><a href="faq.html" class="hover:text-white transition-colors">よくある質問</a></li>
+<li><a href="contact.html" class="hover:text-white transition-colors">お問い合わせ</a></li>
 </ul>
 </div>
 <div>
 <h4 class="text-white font-bold mb-4">法的情報</h4>
 <ul class="space-y-2 text-sm">
-<li><a href="#" class="hover:text-white transition-colors">利用規約</a></li>
-<li><a href="#" class="hover:text-white transition-colors">プライバシーポリシー</a></li>
-<li><a href="#" class="hover:text-white transition-colors">特定商取引法</a></li>
+<li><a href="terms.html" class="hover:text-white transition-colors">利用規約</a></li>
+<li><a href="privacy.html" class="hover:text-white transition-colors">プライバシーポリシー</a></li>
 </ul>
 </div>
 </div>
@@ -772,12 +766,7 @@ mapViewBtn.classList.add('text-gray-600');
 });
 
 mapViewBtn.addEventListener('click', function() {
-listView.classList.add('hidden');
-mapView.classList.remove('hidden');
-mapViewBtn.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
-mapViewBtn.classList.remove('text-gray-600');
-listViewBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
-listViewBtn.classList.add('text-gray-600');
+window.location.href = 'maps.html';
 });
 });
 </script>

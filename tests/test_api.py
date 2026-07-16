@@ -323,6 +323,8 @@ class TestSearchVacantProperties:
         assert "candidates" in body
         assert len(body["candidates"]) == 1
         assert body["candidates"][0]["place_id"] == "place-1"
+        assert body["candidates"][0]["rent_yen"] is None
+        assert body["candidates"][0]["area_sqm"] is None
 
     def test_business_status未指定時は営業状態で絞り込まない(
         self, client: TestClient

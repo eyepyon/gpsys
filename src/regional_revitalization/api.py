@@ -553,6 +553,10 @@ class VacantPropertyBody(BaseModel):
     phone_number: str | None
     estimated_closure_period_start: datetime | None
     estimated_closure_period_end: datetime | None
+    rent_yen: int | None
+    area_sqm: float | None
+    built_year: int | None
+    structure: str | None
 
 
 class VacantPropertySearchResponseBody(BaseModel):
@@ -740,6 +744,10 @@ async def search_vacant_properties_endpoint(
                 phone_number=candidate.phone_number,
                 estimated_closure_period_start=candidate.estimated_closure_period_start,
                 estimated_closure_period_end=candidate.estimated_closure_period_end,
+                rent_yen=candidate.rent_yen,
+                area_sqm=candidate.area_sqm,
+                built_year=candidate.built_year,
+                structure=candidate.structure,
             )
             for candidate in candidates
         ]
